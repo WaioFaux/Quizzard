@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quizzard – Làm quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] } } } }
+</script>
+<style>
+  html, body { font-family: 'Inter', ui-sans-serif, system-ui; }
+  *:focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; border-radius: 6px; }
+  .opt { transition: all .12s; }
+  .opt.selected { border-color: #4F46E5; background: #EEF2FF; }
+  .pill { width: 30px; height: 30px; border-radius: 8px; display:flex; align-items:center; justify-content:center; font-size: 11px; font-weight: 600; flex-shrink:0; }
+  .pill.current { background:#4F46E5; color:#fff; }
+  .pill.answered { background:#E0E7FF; color:#4338CA; }
+  .pill.unanswered { background:#F1F5F9; color:#94A3B8; }
+  .qcard { display: none; }
+  .qcard.active { display: block; }
+</style>
+</head>
+<body class="h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 antialiased flex flex-col">
+
+  <!-- Focused top bar -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <button onclick="if(confirm('Rời khỏi bài làm? Tiến trình sẽ không được lưu trong bản mô phỏng này.')) window.location.href='quizzard-student-quiz-list.html'" class="text-slate-400 hover:text-slate-600">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+      <div>
+        <p class="text-sm font-medium">Buổi 3 – Chuẩn hoá CSDL (1NF – 3NF)</p>
+        <p class="text-xs text-slate-400">Câu <span id="qnum">1</span>/10</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#475569" stroke-width="1.5"/><path d="M10 6v4l3 2" stroke="#475569" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span id="timer" class="text-sm font-semibold font-mono tabular-nums">19:47</span>
+    </div>
+  </header>
+
+  <!-- Progress bar -->
+  <div class="h-1 bg-slate-100 shrink-0">
+    <div id="progress-bar" class="h-1 bg-indigo-600 transition-all" style="width:10%"></div>
+  </div>
+
+  <main class="flex-1 overflow-y-auto flex items-start justify-center py-10 px-4">
+    <div class="w-full max-w-2xl">
+
+      <!-- Question 1 (MCQ) -->
+      <div class="qcard active" id="q-0">
+        <span class="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Trắc nghiệm</span>
+        <h2 class="text-lg font-medium mt-3 mb-5">Cho bảng SINHVIEN(MaSV, HoTen, MaLop, TenLop). Bảng này vi phạm dạng chuẩn nào?</h2>
+        <div class="space-y-2.5">
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,0)">1NF</button>
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,0)">2NF</button>
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,0)">3NF</button>
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,0)">BCNF</button>
+        </div>
+      </div>
+
+      <!-- Question 2 (calculation) -->
+      <div class="qcard" id="q-1">
+        <span class="text-[11px] font-medium bg-sky-50 text-sky-600 px-2 py-0.5 rounded-full">Tính toán</span>
+        <h2 class="text-lg font-medium mt-3 mb-5">Một bảng có <b>8</b> thuộc tính và <b>2</b> phụ thuộc hàm bắc cầu. Số thuộc tính còn lại sau khi tách bảng về 3NF là bao nhiêu?</h2>
+        <input type="number" placeholder="Nhập câu trả lời" oninput="markAnswered(1)" class="w-full max-w-xs rounded-lg border border-slate-300 px-3.5 py-2.5 text-sm focus:border-indigo-500" />
+        <p class="text-xs text-slate-400 mt-2">Số liệu trong câu này được tạo riêng cho bạn — bạn của bạn sẽ thấy con số khác.</p>
+      </div>
+
+      <!-- Question 3 (MCQ) -->
+      <div class="qcard" id="q-2">
+        <span class="text-[11px] font-medium bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Trắc nghiệm</span>
+        <h2 class="text-lg font-medium mt-3 mb-5">Phụ thuộc hàm bắc cầu (transitive dependency) là gì?</h2>
+        <div class="space-y-2.5">
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,2)">A → B và B → C thì A → C, với B không phải khoá</button>
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,2)">Hai thuộc tính phụ thuộc lẫn nhau hai chiều</button>
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,2)">Một thuộc tính phụ thuộc vào chính nó</button>
+          <button class="opt w-full text-left border border-slate-200 rounded-xl px-4 py-3 text-sm hover:border-indigo-300" onclick="selectOpt(this,2)">Không có thuộc tính nào phụ thuộc khoá chính</button>
+        </div>
+      </div>
+
+      <!-- Nav -->
+      <div class="flex items-center justify-between mt-8">
+        <button onclick="go(-1)" class="text-sm font-medium text-slate-500 hover:text-slate-700 disabled:opacity-30" id="btn-prev">← Câu trước</button>
+        <div id="pills" class="flex gap-1.5"></div>
+        <button onclick="go(1)" class="text-sm font-medium text-indigo-600 hover:text-indigo-700" id="btn-next">Câu sau →</button>
+      </div>
+
+      <div id="submit-row" class="hidden mt-6 text-center">
+        <button onclick="submitQuiz()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg px-6 py-3 transition">Nộp bài</button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const total = 10;
+    let current = 0;
+    const answered = new Array(total).fill(false);
+
+    function renderPills() {
+      const el = document.getElementById('pills');
+      el.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const b = document.createElement('button');
+        b.className = 'pill ' + (i === current ? 'current' : answered[i] ? 'answered' : 'unanswered');
+        b.textContent = i + 1;
+        b.onclick = () => { current = i; render(); };
+        el.appendChild(b);
+      }
+    }
+    function render() {
+      document.querySelectorAll('.qcard').forEach((el, i) => el.classList.toggle('active', i % 3 === current % 3));
+      document.getElementById('qnum').textContent = current + 1;
+      document.getElementById('progress-bar').style.width = ((current + 1) / total * 100) + '%';
+      document.getElementById('btn-prev').disabled = current === 0;
+      document.getElementById('btn-next').classList.toggle('hidden', current === total - 1);
+      document.getElementById('submit-row').classList.toggle('hidden', current !== total - 1);
+      renderPills();
+    }
+    function go(delta) {
+      current = Math.max(0, Math.min(total - 1, current + delta));
+      render();
+    }
+    function selectOpt(btn, qIndexMod) {
+      document.querySelectorAll('#q-' + qIndexMod + ' .opt').forEach(o => o.classList.remove('selected'));
+      btn.classList.add('selected');
+      markAnswered(current);
+    }
+    function markAnswered(i) {
+      answered[i] = true;
+      renderPills();
+    }
+    function submitQuiz() {
+      const unanswered = answered.filter(a => !a).length;
+      const msg = unanswered > 0
+        ? `Bạn còn ${unanswered} câu chưa làm. Nộp bài ngay?`
+        : 'Nộp bài của bạn?';
+      if (confirm(msg)) window.location.href = 'quizzard-student-quiz-result.html';
+    }
+
+    // live countdown
+    let remaining = 19 * 60 + 47;
+    const timerEl = document.getElementById('timer');
+    setInterval(() => {
+      remaining = Math.max(0, remaining - 1);
+      const m = Math.floor(remaining / 60), s = remaining % 60;
+      timerEl.textContent = m + ':' + String(s).padStart(2, '0');
+      timerEl.classList.toggle('text-rose-600', remaining <= 120);
+      if (remaining === 0) window.location.href = 'quizzard-student-quiz-result.html';
+    }, 1000);
+
+    render();
+  </script>
+</body>
+</html>

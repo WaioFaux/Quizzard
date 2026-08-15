@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quizzard – Danh sách quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] } } } }
+</script>
+<style>
+  html, body { font-family: 'Inter', ui-sans-serif, system-ui; }
+  *:focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; border-radius: 6px; }
+</style>
+</head>
+<body class="h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 antialiased">
+  <div class="flex h-full">
+
+    <aside class="w-60 shrink-0 bg-white border-r border-slate-200 flex flex-col h-full">
+      <div class="p-5 flex items-center gap-2.5 border-b border-slate-100">
+        <svg width="26" height="26" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="8" fill="#4F46E5"/><path d="M8 14.5L12 18.5L20 9.5" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="text-base font-semibold tracking-tight">Quizzard</span>
+      </div>
+      <nav class="flex-1 p-3 space-y-1">
+        <a href="quizzard-student-dashboard.html" class="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-50 transition">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 3l7 3.5-7 3.5-7-3.5L10 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 10.5l7 3.5 7-3.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 14l7 3.5 7-3.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          Lớp đã tham gia
+        </a>
+      </nav>
+      <div class="p-4 border-t border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-semibold">TL</div>
+          <div class="leading-tight">
+            <p class="text-sm font-medium">Trần Văn Long</p>
+            <p class="text-xs text-slate-400">Sinh viên</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto">
+      <header class="border-b border-slate-200 px-8 pt-5 pb-5 bg-white">
+        <a href="quizzard-student-dashboard.html" class="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 mb-2">
+          <svg width="12" height="12" viewBox="0 0 20 20" fill="none"><path d="M16 10H4M9 5l-5 5 5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Lớp đã tham gia
+        </a>
+        <div class="flex items-start justify-between">
+          <div>
+            <h1 class="text-xl font-semibold">Cơ sở dữ liệu – Nhóm 1</h1>
+            <p class="text-sm text-slate-500 mt-1">GV: Nguyễn Thị Hà · <span class="font-medium text-indigo-700">Hạng 5/28</span></p>
+          </div>
+          <a href="quizzard-student-leaderboard.html" class="flex items-center gap-1.5 border border-slate-300 hover:bg-slate-50 text-sm font-medium rounded-lg px-4 py-2.5 transition">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 17V9M10 17V4M16 17v-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            Bảng xếp hạng
+          </a>
+        </div>
+      </header>
+
+      <div class="p-8 max-w-3xl space-y-2.5">
+
+        <div class="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-semibold shrink-0">9.0</div>
+            <div>
+              <p class="text-sm font-medium">Buổi 1 – Mô hình quan hệ &amp; ràng buộc</p>
+              <p class="text-xs text-slate-400 mt-0.5">Hạn: 18/08 · 20 phút</p>
+            </div>
+          </div>
+          <a href="quizzard-student-quiz-result.html" class="text-sm font-medium text-indigo-600 hover:underline whitespace-nowrap">Xem kết quả →</a>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-semibold shrink-0">8.0</div>
+            <div>
+              <p class="text-sm font-medium">Buổi 2 – Đại số quan hệ</p>
+              <p class="text-xs text-slate-400 mt-0.5">Hạn: 20/08 · 20 phút</p>
+            </div>
+          </div>
+          <a href="quizzard-student-quiz-result.html" class="text-sm font-medium text-indigo-600 hover:underline whitespace-nowrap">Xem kết quả →</a>
+        </div>
+
+        <div class="bg-white border border-amber-200 bg-amber-50/40 rounded-xl px-5 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-amber-100 ring-2 ring-amber-500 text-amber-700 flex items-center justify-center text-xs font-semibold shrink-0">!</div>
+            <div>
+              <p class="text-sm font-medium">Buổi 3 – Chuẩn hoá CSDL (1NF – 3NF)</p>
+              <p class="text-xs text-amber-700 mt-0.5">Còn 18 giờ · 20 phút làm bài</p>
+            </div>
+          </div>
+          <a href="quizzard-student-take-quiz.html" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg px-4 py-2 whitespace-nowrap transition">Bắt đầu làm bài</a>
+        </div>
+
+        <div class="bg-white border border-rose-200 rounded-xl px-5 py-4 flex items-center justify-between opacity-90">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs font-semibold shrink-0">✕</div>
+            <div>
+              <p class="text-sm font-medium">Buổi 2b – Bài tập ràng buộc (bù)</p>
+              <p class="text-xs text-rose-600 mt-0.5">Đã quá hạn · chưa làm</p>
+            </div>
+          </div>
+          <span class="text-sm font-medium text-slate-400 whitespace-nowrap">Quá hạn</span>
+        </div>
+
+        <div class="bg-slate-50 border border-dashed border-slate-300 rounded-xl px-5 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-full border-2 border-dashed border-slate-300 text-slate-400 flex items-center justify-center text-xs shrink-0">4</div>
+            <div>
+              <p class="text-sm font-medium text-slate-400">Buổi 4 – Ràng buộc toàn vẹn &amp; SQL nâng cao</p>
+              <p class="text-xs text-slate-400 mt-0.5">Giảng viên chưa xuất bản</p>
+            </div>
+          </div>
+          <span class="text-sm font-medium text-slate-400 whitespace-nowrap">Chưa mở</span>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</body>
+</html>
