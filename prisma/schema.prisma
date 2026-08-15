@@ -1,12 +1,244 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+enum MaterialStatus {
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum QuizStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum QuestionType {
+  MCQ
+  SHORT_ANSWER
+  ESSAY
+  CALCULATION
+}
+
+enum QuestionStatus {
+  DRAFT
+  FLAGGED_FOR_REVIEW
+  APPROVED
+}
+
+enum QuestionSource {
+  AI_GENERATED
+  MANUAL
+  UPLOADED
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  AUTO_SUBMITTED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+}
+
+// ---------- Core models ----------
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  classesTaught Class[]          @relation("TeacherClasses")
+  enrollments   Enrollment[]
+  attempts      StudentAttempt[]
+}
+
+model Class {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  classCode     String   @unique
+  classPassword String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  teacherId String
+  // Xoá GV -> xoá luôn các lớp của GV đó (và toàn bộ dữ liệu con qua cascade bên dưới)
+  teacher   User   @relation("TeacherClasses", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  materials   Material[]
+  lectures    Lecture[]
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id       String   @id @default(cuid())
+  joinedAt DateTime @default(now())
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, studentId])
+}
+
+model Material {
+  id         String         @id @default(cuid())
+  fileName   String
+  filePath   String
+  status     MaterialStatus @default(PROCESSING)
+  uploadedAt DateTime       @default(now())
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  lectures Lecture[]
+}
+
+model Lecture {
+  id        String   @id @default(cuid())
+  title     String
+  sourceRef String?
+  order     Int
+  createdAt DateTime @default(now())
+
+  classId String
+  class   Class  @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  materialId String?
+  // Xoá Material không nên kéo theo xoá Lecture (đã có thể có quiz/attempt) -> chỉ gỡ liên kết
+  material   Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  quiz Quiz?
+
+  // Không cho 2 bài giảng cùng thứ tự trong 1 lớp
+  @@unique([classId, order])
+}
+
+model Quiz {
+  id                  String     @id @default(cuid())
+  instructions        String
+  questionsPerAttempt Int
+  timeLimitMinutes    Int
+  deadline            DateTime?
+  status              QuizStatus @default(DRAFT)
+  publishedAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  lectureId String  @unique
+  lecture   Lecture @relation(fields: [lectureId], references: [id], onDelete: Cascade)
+
+  questionBank QuestionBankItem[]
+  attempts     StudentAttempt[]
+}
+
+model QuestionBankItem {
+  id   String       @id @default(cuid())
+  type QuestionType
+
+  /// Shape phụ thuộc vào `type`:
+  /// - MCQ: { question: string, options: string[], correctIndex: number, explanation?: string }
+  /// - SHORT_ANSWER: { question: string, correctAnswer: string, explanation?: string }
+  /// - ESSAY: { question: string, rubric?: string }
+  /// - CALCULATION: { questionTemplate: string, variables: { name: string, min: number, max: number }[], formula: string }
+  content Json
+
+  status     QuestionStatus @default(DRAFT)
+  source     QuestionSource @default(AI_GENERATED)
+  reviewNote String?
+
+  // Hướng dẫn riêng nếu câu này sinh qua "Sinh thêm câu hỏi" (mục 4.6) với instruction khác hướng dẫn gốc của Quiz.
+  // Null nếu câu này sinh từ batch đầu tiên (dùng Quiz.instructions).
+  generationInstruction String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  answers StudentAnswer[]
+}
+
+model StudentAttempt {
+  id String @id @default(cuid())
+
+  /// Mảng câu hỏi theo đúng thứ tự hiển thị cho SV này (đã rút tập con + xáo trộn + random số liệu):
+  /// { questionBankItemId: string, order: number, shuffledOptionOrder?: number[], substitutedValues?: Record<string, number> }[]
+  questionSnapshot Json
+
+  status      AttemptStatus @default(IN_PROGRESS)
+  score       Float?
+  startedAt   DateTime      @default(now())
+  submittedAt DateTime?
+
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   User   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  answers StudentAnswer[]
+
+  @@unique([quizId, studentId])
+}
+
+model StudentAnswer {
+  id String @id @default(cuid())
+
+  /// Câu trả lời SV nhập, shape theo QuestionType của câu hỏi:
+  /// - MCQ: { selectedIndex: number }
+  /// - SHORT_ANSWER / ESSAY: { text: string }
+  /// - CALCULATION: { value: number }
+  answer Json
+
+  /// Đáp án đúng đã "đóng băng" tại thời điểm SV nộp bài — quan trọng nhất với CALCULATION
+  /// vì đáp án đúng phụ thuộc số liệu random riêng của SV này:
+  /// - MCQ: { correctIndex: number }
+  /// - SHORT_ANSWER: { correctAnswer: string }
+  /// - ESSAY: null (chấm tay, không có đáp án cố định)
+  /// - CALCULATION: { correctValue: number }
+  correctAnswerSnapshot Json?
+
+  isCorrect     Boolean?
+  pointsAwarded Float?
+
+  attemptId String
+  attempt   StudentAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  questionBankItemId String
+  questionBankItem    QuestionBankItem @relation(fields: [questionBankItemId], references: [id], onDelete: Cascade)
+
+  reports QuestionReport[]
+}
+
+model QuestionReport {
+  id          String       @id @default(cuid())
+  description String
+  status      ReportStatus @default(PENDING)
+  teacherNote String?
+  createdAt   DateTime     @default(now())
+
+  studentAnswerId String
+  studentAnswer   StudentAnswer @relation(fields: [studentAnswerId], references: [id], onDelete: Cascade)
 }
