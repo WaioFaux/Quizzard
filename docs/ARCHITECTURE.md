@@ -103,6 +103,7 @@ interface SourceRef {
   endPage: number;
 }
 ```
+Stored as `Json?` in the database, validated against the `SourceRef` interface on every read/write.
 
 ### `QuestionBankItem.content`
 Discriminated by the sibling `type` column:
