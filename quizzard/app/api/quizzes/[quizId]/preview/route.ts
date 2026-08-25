@@ -1,7 +1,9 @@
 import { NextRequest } from "next/server";
 import { requireTeacher } from "@/lib/middleware/auth";
 import { handleApiError } from "@/lib/utils/error-handler";
-import { AppError } from "@/lib/utils/errors";
+import { generateSample } from "@/lib/ai/generation.service";
+import { getQuiz } from "@/lib/services/quiz.service";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(
   req: NextRequest,
@@ -9,14 +11,34 @@ export async function POST(
 ) {
   try {
     const { quizId } = await params;
-    await requireTeacher();
+    const session = await requireTeacher();
+    const body = await req.json().catch(() => ({}));
 
-    // Sample generation is not in Sprint 1 scope
-    throw new AppError(
-      "Sample question generation requires AI configuration.",
-      "AI_NOT_CONFIGURED",
-      501
+    const instructions =
+      typeof body.instructions === "string" && body.instructions.length > 0
+        ? body.instructions
+        : undefined;
+
+    const quiz = await getQuiz(quizId, session.userId);
+
+    const result = await generateSample(
+      quizId,
+      session.userId,
+      instructions ?? quiz.instructions
     );
+
+    logger.info("quiz.preview", {
+      userId: session.userId,
+      quizId,
+      usedFallback: result.usedFallback,
+    });
+
+    return Response.json({
+      data: {
+        questions: result.questions,
+        usedFallback: result.usedFallback,
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }

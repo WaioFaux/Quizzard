@@ -58,7 +58,7 @@ export default function SignupPage() {
 
       // Redirect based on role
       if (role === "TEACHER") {
-        router.push("/classes");
+        router.push("/teacher/classes");
       } else {
         router.push("/classes");
       }

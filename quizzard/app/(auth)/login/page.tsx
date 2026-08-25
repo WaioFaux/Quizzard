@@ -49,7 +49,7 @@ export default function LoginPage() {
 
       // Redirect based on role
       if (data.data.role === "TEACHER") {
-        router.push("/classes");
+        router.push("/teacher/classes");
       } else {
         router.push("/classes");
       }

@@ -195,3 +195,40 @@ export async function deleteLecture(lectureId: string, teacherId: string) {
 
   await prisma.lecture.delete({ where: { id: lectureId } });
 }
+
+export async function proposeLectures(
+  classId: string,
+  teacherId: string,
+  materialId: string
+) {
+  const cls = await prisma.class.findUnique({
+    where: { id: classId },
+  });
+
+  if (!cls) {
+    throw new NotFoundError("Class");
+  }
+
+  if (cls.teacherId !== teacherId) {
+    throw new AuthorizationError("You do not own this class");
+  }
+
+  const material = await prisma.material.findUnique({
+    where: { id: materialId },
+  });
+
+  if (!material) {
+    throw new NotFoundError("Material");
+  }
+
+  const baseName = material.fileName.replace(/\.pdf$/i, "").replace(/[-_]/g, " ");
+
+  const proposals = [
+    { title: `${baseName} - Introduction`, startPage: 1, endPage: 5 },
+    { title: `${baseName} - Core Concepts`, startPage: 6, endPage: 15 },
+    { title: `${baseName} - Applications`, startPage: 16, endPage: 25 },
+    { title: `${baseName} - Summary`, startPage: 26, endPage: 30 },
+  ];
+
+  return proposals;
+}

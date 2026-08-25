@@ -11,7 +11,7 @@ export default async function AuthLayout({
   // Redirect logged-in users to their dashboard
   if (session?.userId) {
     if (session.role === "TEACHER") {
-      redirect("/classes");
+      redirect("/teacher/classes");
     } else {
       redirect("/classes");
     }

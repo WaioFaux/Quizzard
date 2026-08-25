@@ -16,7 +16,7 @@ export default async function HomePage() {
   // If logged in, redirect to appropriate dashboard
   if (session?.userId) {
     if (session.role === "TEACHER") {
-      redirect("/classes");
+      redirect("/teacher/classes");
     } else {
       redirect("/classes");
     }

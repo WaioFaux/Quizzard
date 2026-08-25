@@ -1,8 +1,9 @@
 import { NextRequest } from "next/server";
 import { requireTeacher } from "@/lib/middleware/auth";
 import { handleApiError } from "@/lib/utils/error-handler";
-import { ValidationError } from "@/lib/utils/errors";
-import { AppError } from "@/lib/utils/errors";
+import { generateQuestionBank } from "@/lib/ai/generation.service";
+import { getQuiz } from "@/lib/services/quiz.service";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(
   req: NextRequest,
@@ -10,14 +11,29 @@ export async function POST(
 ) {
   try {
     const { quizId } = await params;
-    await requireTeacher();
+    const session = await requireTeacher();
+    const body = await req.json().catch(() => ({}));
 
-    // AI generation is not in Sprint 1 scope
-    throw new AppError(
-      "Question generation requires AI configuration. Set GEMINI_API_KEY and implement the AI pipeline for this endpoint.",
-      "AI_NOT_CONFIGURED",
-      501
-    );
+    const count = typeof body.count === "number" ? body.count : undefined;
+
+    const quiz = await getQuiz(quizId, session.userId);
+
+    const result = await generateQuestionBank(quizId, session.userId, count);
+
+    logger.info("quiz.questionBank.generate", {
+      userId: session.userId,
+      quizId,
+      count: result.questions.length,
+      usedFallback: result.usedFallback,
+    });
+
+    return Response.json({
+      data: {
+        questions: result.questions,
+        count: result.questions.length,
+        usedFallback: result.usedFallback,
+      },
+    });
   } catch (err) {
     return handleApiError(err);
   }

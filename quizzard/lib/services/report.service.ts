@@ -121,3 +121,53 @@ export async function listReports(teacherId: string) {
 
   return reports;
 }
+
+export async function updateReport(
+  reportId: string,
+  teacherId: string,
+  input: {
+    status?: "PENDING" | "RESOLVED" | "DISMISSED";
+    reviewNote?: string | null;
+  }
+) {
+  const report = await prisma.questionReport.findUnique({
+    where: { id: reportId },
+    include: {
+      studentAnswer: {
+        include: {
+          attempt: {
+            select: {
+              quiz: {
+                select: {
+                  lecture: {
+                    select: {
+                      class: {
+                        select: { teacherId: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!report) {
+    throw new NotFoundError("Report");
+  }
+
+  if (report.studentAnswer.attempt.quiz.lecture.class.teacherId !== teacherId) {
+    throw new AuthorizationError("You do not own this report");
+  }
+
+  return prisma.questionReport.update({
+    where: { id: reportId },
+    data: {
+      status: input.status ?? report.status,
+      reviewNote: input.reviewNote !== undefined ? input.reviewNote : report.reviewNote,
+    },
+  });
+}

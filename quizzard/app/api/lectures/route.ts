@@ -3,12 +3,12 @@ import { requireTeacher } from "@/lib/middleware/auth";
 import { handleApiError } from "@/lib/utils/error-handler";
 import {
   CreateLectureSchema,
-  PaginationSchema,
 } from "@/lib/validation/schemas";
 import { ValidationError } from "@/lib/utils/errors";
 import {
   createLecture,
   listLectures,
+  proposeLectures,
 } from "@/lib/services/lecture.service";
 import { logger } from "@/lib/utils/logger";
 
@@ -35,15 +35,27 @@ export async function POST(req: NextRequest) {
     const session = await requireTeacher();
     const body = await req.json();
 
-    // If propose=true, this is an AI request (not in Sprint 1)
+    // If propose=true, this is an AI lecture proposal request
     if (body.propose === true) {
-      return Response.json(
-        {
-          error: "AI lecture proposal requires Gemini configuration.",
-          code: "AI_NOT_CONFIGURED",
-        },
-        { status: 501 }
-      );
+      const { classId, materialId } = body;
+
+      if (!classId || typeof classId !== "string") {
+        throw new ValidationError("classId is required for lecture proposal");
+      }
+      if (!materialId || typeof materialId !== "string") {
+        throw new ValidationError("materialId is required for lecture proposal");
+      }
+
+      const proposals = await proposeLectures(classId, session.userId, materialId);
+
+      logger.info("lecture.propose", {
+        userId: session.userId,
+        classId,
+        materialId,
+        proposalCount: proposals.length,
+      });
+
+      return Response.json({ data: proposals }, { status: 200 });
     }
 
     const parsed = CreateLectureSchema.safeParse(body);
