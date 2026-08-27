@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface Material {
   id: string;
@@ -252,6 +252,66 @@ export default function TeacherClassDashboardPage({
       });
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDeleteMaterial(materialId: string) {
+    if (!confirm("Are you sure you want to delete this material? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/materials/${materialId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete material");
+      }
+
+      toast({
+        title: "Success",
+        description: "Material deleted successfully",
+      });
+
+      fetchClass();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete material",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleDeleteLecture(lectureId: string) {
+    if (!confirm("Are you sure you want to delete this lecture? This will also delete any associated quiz. This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/lectures/${lectureId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to delete lecture");
+      }
+
+      toast({
+        title: "Success",
+        description: "Lecture deleted successfully",
+      });
+
+      fetchClass();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete lecture",
+        variant: "destructive",
+      });
     }
   }
 
@@ -545,7 +605,30 @@ export default function TeacherClassDashboardPage({
                         </p>
                       </div>
                     </div>
-                    {getStatusBadge(material.status)}
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(material.status)}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteMaterial(material.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -644,6 +727,30 @@ export default function TeacherClassDashboardPage({
                     </div>
                     <div className="flex items-center gap-2">
                       {lecture.quiz && getStatusBadge(lecture.quiz.status)}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLecture(lecture.id);
+                        }}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </Button>
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="16"

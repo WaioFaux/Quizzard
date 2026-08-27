@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export default function JoinClassPage() {
   const router = useRouter();
@@ -43,7 +43,7 @@ export default function JoinClassPage() {
         description: "You've joined the class!",
       });
 
-      router.push(`/classes/${data.data.class.id}`);
+      router.push(`/student/classes/${data.data.class.id}`);
     } catch (error) {
       toast({
         title: "Error",
@@ -61,7 +61,7 @@ export default function JoinClassPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push("/classes")}
+          onClick={() => router.push("/student/classes")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

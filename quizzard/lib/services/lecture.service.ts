@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
+import { proposeLectures } from "../ai/gemini-client";
 
 export async function createLecture(
   classId: string,
@@ -177,11 +178,18 @@ export async function updateLecture(
   });
 }
 
+export async function getLectureById(lectureId: string) {
+  return prisma.lecture.findUnique({
+    where: { id: lectureId },
+  });
+}
+
 export async function deleteLecture(lectureId: string, teacherId: string) {
   const lecture = await prisma.lecture.findUnique({
     where: { id: lectureId },
     include: {
       class: { select: { teacherId: true } },
+      quiz: true,
     },
   });
 
@@ -193,10 +201,17 @@ export async function deleteLecture(lectureId: string, teacherId: string) {
     throw new AuthorizationError("You do not own this lecture");
   }
 
+  // Delete associated quiz (cascade will handle attempts, answers, reports)
+  if (lecture.quiz) {
+    await prisma.quiz.delete({
+      where: { id: lecture.quiz.id },
+    });
+  }
+
   await prisma.lecture.delete({ where: { id: lectureId } });
 }
 
-export async function proposeLectures(
+export async function proposeLecturesFromMaterial(
   classId: string,
   teacherId: string,
   materialId: string
@@ -221,14 +236,59 @@ export async function proposeLectures(
     throw new NotFoundError("Material");
   }
 
-  const baseName = material.fileName.replace(/\.pdf$/i, "").replace(/[-_]/g, " ");
+  // Check if material has been processed
+  if (material.status !== "PROCESSED" || !material.extractedText) {
+    throw new Error("Material is still being processed or has no extracted text");
+  }
 
-  const proposals = [
-    { title: `${baseName} - Introduction`, startPage: 1, endPage: 5 },
-    { title: `${baseName} - Core Concepts`, startPage: 6, endPage: 15 },
-    { title: `${baseName} - Applications`, startPage: 16, endPage: 25 },
-    { title: `${baseName} - Summary`, startPage: 26, endPage: 30 },
-  ];
+  // Call Gemini API to propose lectures
+  const proposals = await proposeLectures(material.extractedText);
 
   return proposals;
+}
+
+export async function createLecturesFromProposals(
+  classId: string,
+  teacherId: string,
+  materialId: string,
+  proposals: Array<{ title: string; startPage: number; endPage: number }>
+) {
+  const cls = await prisma.class.findUnique({
+    where: { id: classId },
+  });
+
+  if (!cls) {
+    throw new NotFoundError("Class");
+  }
+
+  if (cls.teacherId !== teacherId) {
+    throw new AuthorizationError("You do not own this class");
+  }
+
+  const results = [];
+  for (const proposal of proposals) {
+    const lecture = await createLecture(classId, teacherId, {
+      title: proposal.title,
+      sourceRef: {
+        materialId,
+        startPage: proposal.startPage,
+        endPage: proposal.endPage,
+      },
+      materialId,
+    });
+
+    // Auto-create a draft quiz for the lecture
+    const quiz = await prisma.quiz.create({
+      data: {
+        lectureId: lecture.id,
+        instructions: `Generate questions covering: ${proposal.title}`,
+        questionsPerAttempt: 5,
+        timeLimitMinutes: 30,
+      },
+    });
+
+    results.push({ lectureId: lecture.id, quizId: quiz.id });
+  }
+
+  return results;
 }

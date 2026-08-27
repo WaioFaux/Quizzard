@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface QuizData {
@@ -149,7 +149,6 @@ export default function QuizConfigPage({
     const colors: Record<string, string> = {
       MCQ: "bg-blue-100 text-blue-700",
       SHORT_ANSWER: "bg-green-100 text-green-700",
-      ESSAY: "bg-purple-100 text-purple-700",
       CALCULATION: "bg-orange-100 text-orange-700",
     };
     return colors[type] || "bg-gray-100 text-gray-700";

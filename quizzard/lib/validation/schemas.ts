@@ -133,12 +133,6 @@ const ShortAnswerContentSchema = z.object({
   explanation: z.string().optional(),
 });
 
-const EssayContentSchema = z.object({
-  type: z.literal("ESSAY"),
-  prompt: z.string().min(1, "Question prompt is required"),
-  rubric: z.string().optional(),
-});
-
 const CalculationContentSchema = z.object({
   type: z.literal("CALCULATION"),
   promptTemplate: z.string().min(1, "Prompt template is required"),
@@ -159,7 +153,6 @@ const CalculationContentSchema = z.object({
 export const QuestionContentSchema = z.discriminatedUnion("type", [
   MCQContentSchema,
   ShortAnswerContentSchema,
-  EssayContentSchema,
   CalculationContentSchema,
 ]);
 
@@ -192,11 +185,6 @@ const ShortAnswerAnswerSchema = z.object({
   text: z.string().min(1, "Answer text is required"),
 });
 
-const EssayAnswerSchema = z.object({
-  type: z.literal("ESSAY"),
-  text: z.string().min(1, "Answer text is required"),
-});
-
 const CalculationAnswerSchema = z.object({
   type: z.literal("CALCULATION"),
   value: z.number(),
@@ -205,7 +193,6 @@ const CalculationAnswerSchema = z.object({
 export const StudentAnswerValueSchema = z.discriminatedUnion("type", [
   MCQAnswerSchema,
   ShortAnswerAnswerSchema,
-  EssayAnswerSchema,
   CalculationAnswerSchema,
 ]);
 

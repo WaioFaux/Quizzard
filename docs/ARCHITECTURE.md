@@ -32,7 +32,6 @@ lib/
   question-types/            # Strategy pattern, one file per QuestionType
     mcq.strategy.ts
     short-answer.strategy.ts
-    essay.strategy.ts
     calculation.strategy.ts
     index.ts                 # strategy registry keyed by QuestionType
   state-machines/
@@ -53,7 +52,7 @@ Route handlers stay thin: parse input, call a service function, return the resul
 Every domain concept (`Class`, `Quiz`, `QuestionBank`, `Attempt`, ...) gets one service file with plain exported functions (not a class). Route handlers and server actions call these — never call `prisma.*` directly from a route handler or component.
 
 ### 2. Strategy pattern for `QuestionType`
-Each question type (`MCQ`, `SHORT_ANSWER`, `ESSAY`, `CALCULATION`) implements the same interface:
+Each question type (`MCQ`, `SHORT_ANSWER`, `CALCULATION`) implements the same interface:
 
 ```ts
 interface QuestionTypeStrategy {
@@ -111,7 +110,6 @@ Discriminated by the sibling `type` column:
 type QuestionContent =
   | { type: "MCQ"; prompt: string; options: string[]; correctOptionIndex: number; explanation?: string }
   | { type: "SHORT_ANSWER"; prompt: string; correctAnswer: string; explanation?: string }
-  | { type: "ESSAY"; prompt: string; rubric?: string }
   | {
       type: "CALCULATION";
       promptTemplate: string;   // e.g. "A firm has revenue {a} and cost {b}. Compute the margin."
@@ -138,12 +136,11 @@ type QuestionSnapshot = QuestionSnapshotItem[];
 type StudentAnswerValue =
   | { type: "MCQ"; selectedOptionIndex: number }
   | { type: "SHORT_ANSWER"; text: string }
-  | { type: "ESSAY"; text: string }
   | { type: "CALCULATION"; value: number };
 ```
 
 ### `StudentAnswer.correctAnswerSnapshot`
-Same shape as the matching `StudentAnswerValue` variant (`ESSAY` excluded — not auto-graded), frozen at grading time so later bank edits can never change a past attempt's record.
+Same shape as the matching `StudentAnswerValue` variant, frozen at grading time so later bank edits can never change a past attempt's record.
 
 ## Coding conventions
 

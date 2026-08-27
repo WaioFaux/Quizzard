@@ -48,7 +48,7 @@ A teacher turns a lecture into a quiz by giving the AI instructions (topic focus
 
 ### 5.4 Configure quiz
 Per lecture, the teacher sets:
-- AI instructions (focus content, question type mix: MCQ / short-answer / essay / calculation, difficulty)
+- AI instructions (focus content, question type mix: MCQ / short-answer / calculation, difficulty)
 - Questions per attempt (the per-student draw size, not the pool size)
 - Time limit (minutes)
 - Deadline (can be set now or deferred to the publish step, §5.7)

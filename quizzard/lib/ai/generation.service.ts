@@ -5,8 +5,6 @@ import {
   blindRecheck,
   type GeneratedQuestion,
 } from "./gemini-client";
-import { updateMaterialStatus } from "./material.service";
-import { createLecture } from "./lecture.service";
 import { createQuiz } from "./quiz.service";
 import { createQuestion } from "./question-bank.service";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
@@ -101,50 +99,4 @@ export async function generateQuestionBank(
   }
 
   return { questions: result.questions, usedFallback: result.usedFallback };
-}
-
-export async function createLecturesFromProposals(
-  classId: string,
-  teacherId: string,
-  materialId: string,
-  proposals: Array<{ title: string; startPage: number; endPage: number }>
-) {
-  const cls = await prisma.class.findUnique({
-    where: { id: classId },
-  });
-
-  if (!cls) {
-    throw new NotFoundError("Class");
-  }
-
-  if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
-  }
-
-  const results = [];
-  for (const proposal of proposals) {
-    const lecture = await createLecture(classId, teacherId, {
-      title: proposal.title,
-      sourceRef: {
-        materialId,
-        startPage: proposal.startPage,
-        endPage: proposal.endPage,
-      },
-      materialId,
-    });
-
-    const quiz = await createQuiz(teacherId, {
-      lectureId: lecture.id,
-      instructions:
-        "Generate questions covering the key concepts from this lecture.",
-      questionsPerAttempt: 5,
-      timeLimitMinutes: 30,
-    });
-
-    results.push({ lectureId: lecture.id, quizId: quiz.id });
-  }
-
-  await updateMaterialStatus(materialId, "PROCESSED");
-
-  return results;
 }

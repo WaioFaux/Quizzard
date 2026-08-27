@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ClassData {
@@ -105,7 +105,7 @@ export default function StudentClassesPage() {
           <h1 className="text-2xl font-bold">My Classes</h1>
           <p className="text-muted-foreground">Classes you're enrolled in</p>
         </div>
-        <Button onClick={() => router.push("/classes/join")}>
+        <Button onClick={() => router.push("/student/classes/join")}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="15"
@@ -144,7 +144,7 @@ export default function StudentClassesPage() {
           <p className="text-muted-foreground mb-4 text-center max-w-sm">
             Join a class using the class code provided by your teacher
           </p>
-          <Button onClick={() => router.push("/classes/join")}>
+          <Button onClick={() => router.push("/student/classes/join")}>
             Join a Class
           </Button>
         </Card>
@@ -158,7 +158,7 @@ export default function StudentClassesPage() {
               <Card
                 key={cls.id}
                 className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => router.push(`/classes/${cls.id}`)}
+                onClick={() => router.push(`/student/classes/${cls.id}`)}
               >
                 <CardHeader>
                   <div className="flex items-start justify-between">

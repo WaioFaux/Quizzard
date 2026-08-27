@@ -15,7 +15,6 @@ import {
   CorrectAnswerSnapshot,
   MCQContent,
   ShortAnswerContent,
-  EssayContent,
   CalculationContent,
 } from "../question-types/types";
 import { QuizStatus, AttemptStatus } from "@prisma/client";
@@ -376,11 +375,6 @@ export async function submitAttempt(
       const saContent = questionData.content as ShortAnswerContent;
       correctAnswer = { correctAnswer: saContent.correctAnswer };
       const result = getStrategy("SHORT_ANSWER").grade(answer, correctAnswer);
-      isCorrect = result.isCorrect;
-      pointsAwarded = result.pointsAwarded;
-    } else if (questionData.type === "ESSAY") {
-      correctAnswer = null;
-      const result = getStrategy("ESSAY").grade(answer, correctAnswer);
       isCorrect = result.isCorrect;
       pointsAwarded = result.pointsAwarded;
     } else if (questionData.type === "CALCULATION") {

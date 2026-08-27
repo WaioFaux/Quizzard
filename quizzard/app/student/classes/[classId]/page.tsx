@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface Lecture {
   id: string;
@@ -121,7 +121,7 @@ export default function StudentClassOverviewPage({
       <div className="p-6">
         <Card className="flex flex-col items-center justify-center py-12">
           <h3 className="text-lg font-semibold mb-2">Class not found</h3>
-          <Button variant="outline" onClick={() => router.push("/classes")}>
+          <Button variant="outline" onClick={() => router.push("/student/classes")}>
             Back to Classes
           </Button>
         </Card>
@@ -132,7 +132,7 @@ export default function StudentClassOverviewPage({
   return (
     <div className="p-6">
       <div className="flex items-center gap-2 mb-1">
-        <Button variant="ghost" size="sm" onClick={() => router.push("/classes")}>
+        <Button variant="ghost" size="sm" onClick={() => router.push("/student/classes")}>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -163,7 +163,7 @@ export default function StudentClassOverviewPage({
             </p>
           )}
         </div>
-        <Button variant="outline" onClick={() => router.push("/classes/join")}>
+        <Button variant="outline" onClick={() => router.push("/student/classes/join")}>
           Leave Class
         </Button>
       </div>
@@ -209,7 +209,7 @@ export default function StudentClassOverviewPage({
                     {canStart && (
                       <Button
                         size="sm"
-                        onClick={() => router.push(`/classes/${classId}/quiz/${quiz.id}`)}
+                        onClick={() => router.push(`/student/classes/${classId}/quiz/${quiz.id}`)}
                       >
                         Start Quiz
                       </Button>
@@ -219,7 +219,7 @@ export default function StudentClassOverviewPage({
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          router.push(`/classes/${classId}/quiz/${quiz?.id}/results`)
+                          router.push(`/student/classes/${classId}/quiz/${quiz?.id}/results`)
                         }
                       >
                         View Results

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 interface LeaderboardEntry {
@@ -108,7 +108,7 @@ export default function StudentLeaderboardPage() {
           <p className="text-muted-foreground">See how you rank against other students</p>
         </div>
         {classId && (
-          <Button variant="outline" onClick={() => router.push(`/classes/${classId}`)}>
+          <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -173,7 +173,7 @@ export default function StudentLeaderboardPage() {
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push(`/classes/${classId}`)}
+              onClick={() => router.push(`/student/classes/${classId}`)}
             >
               Take Quiz
             </Button>

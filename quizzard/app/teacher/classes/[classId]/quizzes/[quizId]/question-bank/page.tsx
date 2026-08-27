@@ -18,7 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionType } from "@prisma/client";
 
@@ -164,12 +164,6 @@ export default function QuestionBankPage({
           prompt: questionForm.prompt,
           correctAnswer: questionForm.correctAnswer,
           explanation: questionForm.explanation || undefined,
-        };
-      } else if (questionForm.type === "ESSAY") {
-        content = {
-          type: "ESSAY",
-          prompt: questionForm.prompt,
-          rubric: questionForm.rubric || undefined,
         };
       } else if (questionForm.type === "CALCULATION") {
         const vars = questionForm.variables.split("\n").map((line) => {
@@ -360,7 +354,6 @@ export default function QuestionBankPage({
     const colors: Record<string, string> = {
       MCQ: "bg-blue-100 text-blue-700",
       SHORT_ANSWER: "bg-green-100 text-green-700",
-      ESSAY: "bg-purple-100 text-purple-700",
       CALCULATION: "bg-orange-100 text-orange-700",
     };
     return (
@@ -500,7 +493,6 @@ export default function QuestionBankPage({
                     >
                       <option value="MCQ">Multiple Choice (MCQ)</option>
                       <option value="SHORT_ANSWER">Short Answer</option>
-                      <option value="ESSAY">Essay</option>
                       <option value="CALCULATION">Calculation</option>
                     </select>
                   </div>
@@ -592,21 +584,6 @@ export default function QuestionBankPage({
                           })
                         }
                         required
-                      />
-                    </div>
-                  )}
-
-                  {questionForm.type === "ESSAY" && (
-                    <div className="space-y-2">
-                      <Label htmlFor="rubric">Rubric (optional)</Label>
-                      <Textarea
-                        id="rubric"
-                        placeholder="Grading rubric for this essay..."
-                        rows={3}
-                        value={questionForm.rubric}
-                        onChange={(e) =>
-                          setQuestionForm({ ...questionForm, rubric: e.target.value })
-                        }
                       />
                     </div>
                   )}

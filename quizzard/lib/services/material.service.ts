@@ -2,6 +2,8 @@ import path from "path";
 import fs from "fs/promises";
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
+import { extractTextFromPDF, truncateText } from "../pdf/extract";
+import { logger } from "../utils/logger";
 
 const UPLOAD_DIR = process.env.FILE_STORAGE_PATH ?? "./public/uploads";
 
@@ -32,6 +34,7 @@ export async function uploadMaterial(
   // Write file
   await fs.writeFile(filePath, file.data);
 
+  // Create material record with PROCESSING status
   const material = await prisma.material.create({
     data: {
       fileName: file.filename,
@@ -41,7 +44,71 @@ export async function uploadMaterial(
     },
   });
 
+  // Extract just the filename for the processing function
+  const filename = path.basename(publicPath);
+
+  // Process PDF in background (don't await to avoid blocking the response)
+  processMaterialAsync(material.id, filename).catch((error) => {
+    console.error(`Failed to process material ${material.id}:`, error);
+  });
+
   return material;
+}
+
+async function processMaterialAsync(materialId: string, filename: string) {
+  const startTime = Date.now();
+
+  try {
+    // Resolve the full path before extraction
+    const uploadDir = path.resolve(UPLOAD_DIR);
+    const absolutePath = path.join(uploadDir, filename);
+
+    logger.info("material.processing.start", {
+      materialId,
+      filename,
+      absolutePath,
+    });
+
+    // Extract text from PDF
+    const extraction = await extractTextFromPDF(absolutePath);
+    const truncatedText = truncateText(extraction.text);
+
+    // Validate extracted text is not empty
+    if (!truncatedText || truncatedText.trim().length === 0) {
+      throw new Error("PDF extracted text is empty - the file may be scanned/image-based or corrupted");
+    }
+
+    // Update material with extracted text
+    await prisma.material.update({
+      where: { id: materialId },
+      data: {
+        status: "PROCESSED",
+        extractedText: truncatedText,
+      },
+    });
+
+    logger.info("material.processing.success", {
+      materialId,
+      textLength: truncatedText.length,
+      pageCount: extraction.pageCount,
+      duration_ms: Date.now() - startTime,
+    });
+  } catch (error) {
+    logger.error("material.processing.failed", {
+      materialId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      duration_ms: Date.now() - startTime,
+    });
+
+    // Mark as failed
+    await prisma.material.update({
+      where: { id: materialId },
+      data: {
+        status: "FAILED",
+      },
+    });
+  }
 }
 
 export async function getMaterial(materialId: string, teacherId: string) {
@@ -113,4 +180,36 @@ export async function updateMaterialStatus(
       ...(extractedText !== undefined && { extractedText }),
     },
   });
+}
+
+export async function reprocessMaterial(materialId: string, teacherId: string) {
+  const material = await prisma.material.findUnique({
+    where: { id: materialId },
+    include: {
+      class: {
+        select: { teacherId: true },
+      },
+    },
+  });
+
+  if (!material) {
+    throw new NotFoundError("Material");
+  }
+
+  if (material.class.teacherId !== teacherId) {
+    throw new AuthorizationError("You do not own this material");
+  }
+
+  // Reset status and reprocess
+  await prisma.material.update({
+    where: { id: materialId },
+    data: { status: "PROCESSING", extractedText: null },
+  });
+
+  // Process in background
+  processMaterialAsync(materialId, path.basename(material.filePath)).catch((error) => {
+    console.error(`Failed to reprocess material ${materialId}:`, error);
+  });
+
+  return prisma.material.findUnique({ where: { id: materialId } });
 }

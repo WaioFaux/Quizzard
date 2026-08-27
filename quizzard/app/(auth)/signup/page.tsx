@@ -60,7 +60,7 @@ export default function SignupPage() {
       if (role === "TEACHER") {
         router.push("/teacher/classes");
       } else {
-        router.push("/classes");
+        router.push("/student/classes");
       }
       router.refresh();
     } catch {

@@ -15,12 +15,6 @@ export type ShortAnswerContent = {
   explanation?: string;
 };
 
-export type EssayContent = {
-  type: "ESSAY";
-  prompt: string;
-  rubric?: string;
-};
-
 export type CalculationContent = {
   type: "CALCULATION";
   promptTemplate: string;
@@ -37,21 +31,18 @@ export type CalculationContent = {
 export type QuestionContent =
   | MCQContent
   | ShortAnswerContent
-  | EssayContent
   | CalculationContent;
 
-export type QuestionType = "MCQ" | "SHORT_ANSWER" | "ESSAY" | "CALCULATION";
+export type QuestionType = "MCQ" | "SHORT_ANSWER" | "CALCULATION";
 
 // Answer shapes
 export type MCQAnswer = { type: "MCQ"; selectedOptionIndex: number };
 export type ShortAnswerAnswer = { type: "SHORT_ANSWER"; text: string };
-export type EssayAnswer = { type: "ESSAY"; text: string };
 export type CalculationAnswer = { type: "CALCULATION"; value: number };
 
 export type StudentAnswerValue =
   | MCQAnswer
   | ShortAnswerAnswer
-  | EssayAnswer
   | CalculationAnswer;
 
 // Correct answer snapshots
@@ -61,8 +52,7 @@ export type CalculationCorrectAnswer = { correctValue: number };
 export type CorrectAnswerSnapshot =
   | MCQCorrectAnswer
   | ShortAnswerCorrectAnswer
-  | CalculationCorrectAnswer
-  | null; // ESSAY has no auto-grading
+  | CalculationCorrectAnswer;
 
 // Grading result
 export type GradeResult = {

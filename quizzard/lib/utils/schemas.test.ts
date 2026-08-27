@@ -300,19 +300,7 @@ describe("CreateQuestionSchema - MCQ", () => {
     expect(result.success).toBe(true);
   });
 
-  it("should accept ESSAY", () => {
-    const result = CreateQuestionSchema.safeParse({
-      type: "ESSAY",
-      content: {
-        type: "ESSAY",
-        prompt: "Discuss AI impact.",
-        rubric: "Include 3 points",
-      },
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("should accept CALCULATION", () => {
+  it("should reject name too long", () => {
     const result = CreateQuestionSchema.safeParse({
       type: "CALCULATION",
       content: {

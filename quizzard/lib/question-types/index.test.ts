@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mcqStrategy } from "./mcq.strategy";
 import { shortAnswerStrategy } from "./short-answer.strategy";
-import { essayStrategy } from "./essay.strategy";
 import { calculationStrategy } from "./calculation.strategy";
 import { getStrategy, gradeAnswer } from "./index";
 
@@ -105,45 +104,6 @@ describe("Short Answer Strategy", () => {
   });
 });
 
-describe("Essay Strategy", () => {
-  const validContent = {
-    type: "ESSAY" as const,
-    prompt: "Discuss the impact of AI on education.",
-    rubric: "Focus on key themes",
-  };
-
-  it("validateContent should accept valid ESSAY content", () => {
-    expect(essayStrategy.validateContent(validContent)).toBe(true);
-  });
-
-  it("validateContent should reject invalid content", () => {
-    expect(essayStrategy.validateContent({ type: "ESSAY" })).toBe(false);
-    expect(essayStrategy.validateContent({ prompt: "Test" })).toBe(false);
-  });
-
-  it("renderForStudent should return content as-is", () => {
-    const result = essayStrategy.renderForStudent(validContent);
-    expect(result).toEqual(validContent);
-  });
-
-  it("grade should return 0 with null correctAnswer (manual grading)", () => {
-    const result = essayStrategy.grade(
-      { type: "ESSAY", text: "Some essay text" },
-      null
-    );
-    expect(result.pointsAwarded).toBe(0);
-    expect(result.feedback).toContain("manual grading");
-  });
-
-  it("grade should return 0 for non-null correctAnswer", () => {
-    const result = essayStrategy.grade(
-      { type: "ESSAY", text: "Some essay text" },
-      { correctAnswer: "should not happen" }
-    );
-    expect(result.pointsAwarded).toBe(0);
-  });
-});
-
 describe("Calculation Strategy", () => {
   const validContent = {
     type: "CALCULATION" as const,
@@ -230,7 +190,6 @@ describe("Strategy Registry", () => {
   it("getStrategy should return correct strategy for each type", () => {
     expect(getStrategy("MCQ")).toBe(mcqStrategy);
     expect(getStrategy("SHORT_ANSWER")).toBe(shortAnswerStrategy);
-    expect(getStrategy("ESSAY")).toBe(essayStrategy);
     expect(getStrategy("CALCULATION")).toBe(calculationStrategy);
   });
 

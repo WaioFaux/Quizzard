@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface QuizData {
   id: string;
@@ -84,7 +84,7 @@ export default function QuizIntroPage({
       }
 
       router.push(
-        `/classes/${classId}/quiz/${quizId}/attempt?attemptId=${data.data.id}`
+        `/student/classes/${classId}/quiz/${quizId}/attempt?attemptId=${data.data.id}`
       );
     } catch (error) {
       toast({
@@ -135,7 +135,7 @@ export default function QuizIntroPage({
           <p className="text-muted-foreground mb-4">
             This quiz may not be published yet
           </p>
-          <Button variant="outline" onClick={() => router.push(`/classes/${classId}`)}>
+          <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
             Back to Class
           </Button>
         </Card>
@@ -149,7 +149,7 @@ export default function QuizIntroPage({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(`/classes/${classId}`)}
+          onClick={() => router.push(`/student/classes/${classId}`)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -240,7 +240,7 @@ export default function QuizIntroPage({
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => router.push(`/classes/${classId}`)}
+                onClick={() => router.push(`/student/classes/${classId}`)}
               >
                 Back to Class
               </Button>
@@ -249,7 +249,7 @@ export default function QuizIntroPage({
                   className="flex-1"
                   onClick={() =>
                     router.push(
-                      `/classes/${classId}/quiz/${quizId}/results?attemptId=${existingAttemptId}`
+                      `/student/classes/${classId}/quiz/${quizId}/results?attemptId=${existingAttemptId}`
                     )
                   }
                 >

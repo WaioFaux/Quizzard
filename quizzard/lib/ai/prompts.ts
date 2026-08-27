@@ -2,17 +2,48 @@ import type { QuestionType } from "@prisma/client";
 
 export interface PromptContext {
   topic: string;
+  count?: number;
   difficulty?: "easy" | "medium" | "hard";
   questionTypes?: QuestionType[];
   existingQuestions?: string[];
   materialText?: string;
 }
 
-export function buildGenerationPrompt(ctx: PromptContext): string {
+export interface GeneratedPrompt {
+  type: "MCQ" | "SHORT_ANSWER" | "CALCULATION";
+  prompt?: string;
+  promptTemplate?: string;
+  options?: string[];
+  correctOptionIndex?: number;
+  correctAnswer?: string;
+  variables?: Array<{
+    name: string;
+    min: number;
+    max: number;
+    decimals?: number;
+  }>;
+  answerFormula?: string;
+  explanation?: string;
+}
+
+export interface RecheckResult {
+  flagged: boolean;
+  reason?: string;
+  suggestion?: string;
+}
+
+export interface LectureProposal {
+  title: string;
+  startPage: number;
+  endPage: number;
+}
+
+export function generateQuestionsPrompt(ctx: PromptContext): string {
+  const count = ctx.count ?? 5;
   const typeList =
     ctx.questionTypes && ctx.questionTypes.length > 0
       ? ctx.questionTypes.join(", ")
-      : "MCQ, SHORT_ANSWER, ESSAY, CALCULATION";
+      : "MCQ, SHORT_ANSWER, CALCULATION";
 
   const difficulty = ctx.difficulty ?? "medium";
   const existingList =
@@ -21,68 +52,162 @@ export function buildGenerationPrompt(ctx: PromptContext): string {
       : "";
 
   const materialSection = ctx.materialText
-    ? `\n\nUse the following material as context:\n${ctx.materialText}`
+    ? `\n\nUse the following material as context for generating accurate questions:\n${ctx.materialText}`
     : "";
 
-  return `You are a quiz question generator for educational content.
+  return `You are a quiz question generator for educational content. Your task is to generate ${count} diverse, high-quality questions based on the given topic and context.
 
-Generate questions about: ${ctx.topic}
+Topic: ${ctx.topic}
 Difficulty: ${difficulty}
-Question types to include: ${typeList}${materialSection}${existingList}
+Question types to generate: ${typeList}${materialSection}${existingList}
 
-Requirements:
-- Each question must be factually accurate and relevant to the topic.
-- MCQ questions must have exactly 4 options with one clearly correct answer.
-- SHORT_ANSWER questions must have a single, unambiguous correct answer.
-- ESSAY questions must have a clear rubric for grading.
-- CALCULATION questions must include variable ranges and a formula.
-- Avoid questions that overlap with existing questions.
-- Do not include the correct answer in the question text.
+## Requirements for Each Question Type:
 
-Output format: Return a JSON array of question objects matching these shapes:
+### MCQ (Multiple Choice Questions)
+- Create exactly 4 distinct options (A, B, C, D)
+- One option must be clearly correct, others plausible but wrong
+- Avoid "all of the above" or "none of the above" options
+- The prompt should not reveal the answer
+- Include a brief explanation for the correct answer
 
-MCQ: { "type": "MCQ", "prompt": "...", "options": ["A", "B", "C", "D"], "correctOptionIndex": 0, "explanation": "..." }
-SHORT_ANSWER: { "type": "SHORT_ANSWER", "prompt": "...", "correctAnswer": "...", "explanation": "..." }
-ESSAY: { "type": "ESSAY", "prompt": "...", "rubric": "..." }
-CALCULATION: { "type": "CALCULATION", "promptTemplate": "...", "variables": [{ "name": "x", "min": 1, "max": 10, "decimals": 0 }], "answerFormula": "x * 2", "explanation": "..." }
+### SHORT_ANSWER Questions
+- Require a concise, single correct answer (1-3 sentences)
+- The answer should be unambiguous and objectively verifiable
+- Include an optional explanation
 
-Return ONLY the JSON array, no additional text.`;
+### CALCULATION Questions
+- Include a promptTemplate with variable placeholders like {variableName}
+- Define variables with name, min, max, and optional decimals
+- Provide a mathematically valid answerFormula using variable names
+- Include an explanation of the calculation approach
+
+## Output Format:
+Return a JSON array of ${count} question objects. Each object must match exactly one of these shapes:
+
+\`\`\`json
+[
+  {
+    "type": "MCQ",
+    "prompt": "Question text here",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctOptionIndex": 0,
+    "explanation": "Why this is correct"
+  },
+  {
+    "type": "SHORT_ANSWER",
+    "prompt": "Question text here",
+    "correctAnswer": "The correct answer",
+    "explanation": "Optional explanation"
+  },
+  {
+    "type": "CALCULATION",
+    "promptTemplate": "A {item} costs ${price}. With {tax_rate}% tax, what is the total?",
+    "variables": [
+      {"name": "item", "min": 1, "max": 10, "decimals": 0},
+      {"name": "price", "min": 10, "max": 100, "decimals": 2},
+      {"name": "tax_rate", "min": 5, "max": 15, "decimals": 1}
+    ],
+    "answerFormula": "(price * item) * (1 + tax_rate / 100)",
+    "explanation": "Calculate subtotal, then add tax percentage"
+  }
+]
+\`\`\`
+
+Return ONLY the JSON array, no additional text or explanation.`;
 }
 
-export function buildSamplePrompt(ctx: PromptContext): string {
-  return buildGenerationPrompt({ ...ctx, questionTypes: ctx.questionTypes ?? ["MCQ", "SHORT_ANSWER"] });
+export function recheckQuestionPrompt(question: object): string {
+  return `You are a quality assurance reviewer for educational quiz questions. Carefully examine the question below for any issues.
+
+Question to review:
+\`\`\`json
+${JSON.stringify(question, null, 2)}
+\`\`\`
+
+## Review Checklist:
+1. **Factual Accuracy**: Is the question content factually correct?
+2. **Clarity**: Is the question clear and unambiguous?
+3. **Correct Answer Validity**: Is the correct answer actually correct?
+4. **Option Quality** (for MCQ): Are all options plausible and relevant?
+5. **Formula Validity** (for CALCULATION): Does the formula produce correct results?
+6. **Appropriate Difficulty**: Is the question appropriate for the intended audience?
+7. **No Answer Leakage**: Does the question text avoid revealing the answer?
+
+## Response Format:
+Return a JSON object with your assessment:
+\`\`\`json
+{
+  "flagged": true or false,
+  "reason": "If flagged, explain the specific issue(s) found",
+  "suggestion": "If flagged, provide a suggested correction"
+}
+\`\`\`
+
+Return ONLY the JSON object, no additional text.`;
 }
 
-export function buildRecheckPrompt(question: object): string {
-  return `Review the following quiz question for correctness, clarity, and absence of ambiguity.
+export function proposeLecturesPrompt(materialText: string): string {
+  return `Analyze the following educational material and propose a logical division of lectures/sessions.
 
-Question: ${JSON.stringify(question, null, 2)}
-
-Check for:
-1. Factual accuracy of the content
-2. Clarity of the question prompt
-3. Validity of the correct answer
-4. Appropriateness of options (for MCQ)
-5. Validity of the formula (for CALCULATION)
-6. Potential confusion points or ambiguous wording
-
-Respond with a JSON object:
-{ "flagged": true/false, "reason": "explanation if flagged", "suggestion": "optional correction" }`;
-}
-
-export function buildLectureProposalPrompt(materialText: string): string {
-  return `Analyze the following educational material and propose a list of lectures/sessions.
-
-Material:
+Source Material:
+\`\`\`
 ${materialText}
+\`\`\`
 
-Based on the content, propose a list of logical lecture divisions. Each lecture should:
-- Cover a distinct topic or chapter
-- Have a descriptive title (max 100 characters)
-- Reference the approximate page range in the source material
+## Guidelines for Lecture Division:
+- Each lecture should cover a distinct, coherent topic or chapter
+- Lectures should have descriptive titles (max 100 characters)
+- Reference approximate page ranges where content shifts to a new topic
+- Consider the natural flow and progression of concepts
+- Balance lecture lengths (avoid extremely short or long lectures)
 
-Respond with a JSON array:
-[{ "title": "Lecture Title", "startPage": 1, "endPage": 10 }]
+## Response Format:
+Return a JSON array of lecture proposals:
+\`\`\`json
+[
+  {
+    "title": "Introduction to Database Concepts",
+    "startPage": 1,
+    "endPage": 10
+  },
+  {
+    "title": "Relational Data Modeling",
+    "startPage": 11,
+    "endPage": 25
+  }
+]
+\`\`\`
 
-Return ONLY the JSON array, no additional text.`;
+Return ONLY the JSON array, no additional text or explanation.`;
+}
+
+export function buildGradingPrompt(
+  question: object,
+  studentAnswer: string
+): string {
+  return `You are an AI grading assistant. Evaluate the student's answer against the question and correct answer.
+
+Question:
+\`\`\`json
+${JSON.stringify(question, null, 2)}
+\`\`\`
+
+Student's Answer:
+${studentAnswer}
+
+## Grading Guidelines:
+- Compare the student's answer to the expected correct answer
+- For SHORT_ANSWER: Check if key elements are present (partial credit allowed)
+- For CALCULATION: Verify the mathematical result and methodology
+
+## Response Format:
+\`\`\`json
+{
+  "score": <number between 0 and maxScore>,
+  "maxScore": <maximum possible score>,
+  "feedback": "Brief explanation of the grade and what was correct/incorrect"
+}
+\`\`\`
+
+Return ONLY the JSON object, no additional text.`;
 }

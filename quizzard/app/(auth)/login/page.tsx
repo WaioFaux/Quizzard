@@ -51,7 +51,7 @@ export default function LoginPage() {
       if (data.data.role === "TEACHER") {
         router.push("/teacher/classes");
       } else {
-        router.push("/classes");
+        router.push("/student/classes");
       }
       router.refresh();
     } catch {

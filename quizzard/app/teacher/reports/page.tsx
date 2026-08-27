@@ -14,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface QuestionReport {
@@ -135,7 +135,6 @@ export default function TeacherReportsPage() {
     const colors: Record<string, string> = {
       MCQ: "bg-blue-100 text-blue-700",
       SHORT_ANSWER: "bg-green-100 text-green-700",
-      ESSAY: "bg-purple-100 text-purple-700",
       CALCULATION: "bg-orange-100 text-orange-700",
     };
     return (

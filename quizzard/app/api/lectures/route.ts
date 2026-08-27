@@ -8,7 +8,7 @@ import { ValidationError } from "@/lib/utils/errors";
 import {
   createLecture,
   listLectures,
-  proposeLectures,
+  proposeLecturesFromMaterial,
 } from "@/lib/services/lecture.service";
 import { logger } from "@/lib/utils/logger";
 
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
         throw new ValidationError("materialId is required for lecture proposal");
       }
 
-      const proposals = await proposeLectures(classId, session.userId, materialId);
+      const proposals = await proposeLecturesFromMaterial(classId, session.userId, materialId);
 
       logger.info("lecture.propose", {
         userId: session.userId,

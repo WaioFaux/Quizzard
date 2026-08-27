@@ -18,7 +18,7 @@ export default async function HomePage() {
     if (session.role === "TEACHER") {
       redirect("/teacher/classes");
     } else {
-      redirect("/classes");
+      redirect("/student/classes");
     }
   }
 

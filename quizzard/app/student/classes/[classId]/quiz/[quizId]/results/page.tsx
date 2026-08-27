@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
   DialogContent,
@@ -179,7 +179,7 @@ export default function QuizResultsPage({
             <p className="text-muted-foreground mb-4">
               This quiz result could not be loaded
             </p>
-            <Button variant="outline" onClick={() => router.push(`/classes/${classId}`)}>
+            <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
               Back to Class
             </Button>
           </CardContent>
@@ -198,7 +198,7 @@ export default function QuizResultsPage({
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(`/classes/${classId}`)}
+          onClick={() => router.push(`/student/classes/${classId}`)}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -314,8 +314,6 @@ export default function QuizResultsPage({
                             ? "bg-blue-100 text-blue-700"
                             : question.type === "SHORT_ANSWER"
                             ? "bg-green-100 text-green-700"
-                            : question.type === "ESSAY"
-                            ? "bg-purple-100 text-purple-700"
                             : "bg-orange-100 text-orange-700"
                         }
                       >
@@ -407,13 +405,13 @@ export default function QuizResultsPage({
 
       {/* Actions */}
       <div className="flex justify-center gap-4 mt-8">
-        <Button variant="outline" onClick={() => router.push(`/classes/${classId}`)}>
+        <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
           Back to Class
         </Button>
         <Button
           variant="outline"
           onClick={() =>
-            router.push(`/leaderboard?quizId=${quizId}&classId=${classId}`)
+            router.push(`/student/leaderboard?quizId=${quizId}&classId=${classId}`)
           }
         >
           View Leaderboard

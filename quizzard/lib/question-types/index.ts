@@ -1,14 +1,12 @@
 import { QuestionTypeStrategy, QuestionType } from "./types";
 import { mcqStrategy } from "./mcq.strategy";
 import { shortAnswerStrategy } from "./short-answer.strategy";
-import { essayStrategy } from "./essay.strategy";
 import { calculationStrategy } from "./calculation.strategy";
 
 export { QuestionTypeStrategy, QuestionType };
 export {
   mcqStrategy,
   shortAnswerStrategy,
-  essayStrategy,
   calculationStrategy,
 };
 
@@ -18,8 +16,6 @@ export function getStrategy(type: QuestionType): QuestionTypeStrategy {
       return mcqStrategy;
     case "SHORT_ANSWER":
       return shortAnswerStrategy;
-    case "ESSAY":
-      return essayStrategy;
     case "CALCULATION":
       return calculationStrategy;
     default:

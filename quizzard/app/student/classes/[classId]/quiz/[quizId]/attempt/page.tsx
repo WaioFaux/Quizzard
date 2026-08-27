@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 interface QuestionSnapshot {
@@ -179,7 +179,7 @@ export default function QuizAttemptPage({
       });
 
       router.push(
-        `/classes/${classId}/quiz/${quizId}/results?attemptId=${attemptId}`
+        `/student/classes/${classId}/quiz/${quizId}/results?attemptId=${attemptId}`
       );
     } catch (error) {
       toast({
@@ -209,7 +209,6 @@ export default function QuizAttemptPage({
     const colors: Record<string, string> = {
       MCQ: "bg-blue-100 text-blue-700",
       SHORT_ANSWER: "bg-green-100 text-green-700",
-      ESSAY: "bg-purple-100 text-purple-700",
       CALCULATION: "bg-orange-100 text-orange-700",
     };
     return (
@@ -240,7 +239,7 @@ export default function QuizAttemptPage({
             <p className="text-muted-foreground mb-4">
               This quiz attempt could not be loaded
             </p>
-            <Button variant="outline" onClick={() => router.push(`/classes/${classId}`)}>
+            <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
               Back to Class
             </Button>
           </CardContent>
@@ -352,23 +351,6 @@ export default function QuizAttemptPage({
                       })
                     }
                     className="w-full px-4 py-3 rounded-lg border bg-background"
-                  />
-                </div>
-              )}
-
-              {currentQ.type === "ESSAY" && (
-                <div className="space-y-2">
-                  <textarea
-                    placeholder="Type your answer..."
-                    rows={6}
-                    value={answers[currentQ.questionBankItemId]?.text || ""}
-                    onChange={(e) =>
-                      handleAnswerChange(currentQ.questionBankItemId, {
-                        type: "ESSAY",
-                        text: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-3 rounded-lg border bg-background resize-none"
                   />
                 </div>
               )}
