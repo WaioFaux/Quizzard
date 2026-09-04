@@ -209,6 +209,23 @@ export async function deleteLecture(lectureId: string, teacherId: string) {
   }
 
   await prisma.lecture.delete({ where: { id: lectureId } });
+
+  // Reorder remaining lectures to fill the gap
+  const remainingLectures = await prisma.lecture.findMany({
+    where: { classId: lecture.classId },
+    orderBy: { order: "asc" },
+  });
+
+  // Update order for each lecture to be consecutive starting from 1
+  for (let i = 0; i < remainingLectures.length; i++) {
+    const newOrder = i + 1;
+    if (remainingLectures[i].order !== newOrder) {
+      await prisma.lecture.update({
+        where: { id: remainingLectures[i].id },
+        data: { order: newOrder },
+      });
+    }
+  }
 }
 
 export async function proposeLecturesFromMaterial(

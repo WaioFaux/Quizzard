@@ -3,7 +3,7 @@ import { mcqStrategy } from "./mcq.strategy";
 import { shortAnswerStrategy } from "./short-answer.strategy";
 import { calculationStrategy } from "./calculation.strategy";
 
-export { QuestionTypeStrategy, QuestionType };
+export type { QuestionTypeStrategy, QuestionType };
 export {
   mcqStrategy,
   shortAnswerStrategy,

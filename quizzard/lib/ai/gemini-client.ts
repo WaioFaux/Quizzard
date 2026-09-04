@@ -59,17 +59,26 @@ export interface GenerationResult {
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
+const LOG_PREFIX = "[Gemini Client]";
+
 interface GeminiError {
   status: number;
   message: string;
 }
 
-async function callGeminiForJSON<T>(
+export async function callGeminiForJSON<T>(
   prompt: string,
   retries: number = 3,
   retryDelayMs: number = 1000
 ): Promise<T> {
   const { apiKey, model } = config.gemini;
+
+  console.log(`${LOG_PREFIX} [API_CALL_START] Initiating Gemini API call`, {
+    model,
+    promptLength: prompt.length,
+    promptPreview: prompt.substring(0, 200),
+    timestamp: new Date().toISOString(),
+  });
 
   const url = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
@@ -90,7 +99,20 @@ async function callGeminiForJSON<T>(
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
+    console.log(`${LOG_PREFIX} [API_ATTEMPT] Attempt ${attempt + 1}/${retries + 1}`, {
+      model,
+      attempt,
+      timestamp: new Date().toISOString(),
+    });
+
     try {
+      console.log(`${LOG_PREFIX} [API_REQUEST] Sending request to Gemini`, {
+        model,
+        attempt,
+        requestBodySize: JSON.stringify(requestBody).length,
+        timestamp: new Date().toISOString(),
+      });
+
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -99,16 +121,46 @@ async function callGeminiForJSON<T>(
         body: JSON.stringify(requestBody),
       });
 
+      console.log(`${LOG_PREFIX} [API_RESPONSE] Received response from Gemini`, {
+        model,
+        attempt,
+        status: response.status,
+        statusText: response.statusText,
+        timestamp: new Date().toISOString(),
+      });
+
       if (!response.ok) {
         const errorBody = await response.text();
+        console.error(`${LOG_PREFIX} [API_ERROR] HTTP error response`, {
+          model,
+          attempt,
+          status: response.status,
+          statusText: response.statusText,
+          errorBody,
+          timestamp: new Date().toISOString(),
+        });
         throw new Error(`Gemini API error: ${response.status} - ${errorBody}`);
       }
 
       const data = await response.json();
 
+      console.log(`${LOG_PREFIX} [API_RESPONSE] Parsed response data`, {
+        model,
+        attempt,
+        hasCandidates: !!data?.candidates,
+        candidatesCount: data?.candidates?.length,
+        timestamp: new Date().toISOString(),
+      });
+
       const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
       if (!textContent) {
+        console.error(`${LOG_PREFIX} [API_ERROR] No text content in response`, {
+          model,
+          attempt,
+          fullResponse: JSON.stringify(data).substring(0, 500),
+          timestamp: new Date().toISOString(),
+        });
         throw new Error("No text content in Gemini response");
       }
 
@@ -126,11 +178,38 @@ async function callGeminiForJSON<T>(
 
       cleanedText = cleanedText.trim();
 
+      console.log(`${LOG_PREFIX} [API_RESPONSE] Cleaned response text`, {
+        model,
+        attempt,
+        cleanedLength: cleanedText.length,
+        cleanedPreview: cleanedText.substring(0, 200),
+        timestamp: new Date().toISOString(),
+      });
+
       try {
-        return JSON.parse(cleanedText) as T;
+        const result = JSON.parse(cleanedText) as T;
+        console.log(`${LOG_PREFIX} [API_SUCCESS] JSON parsed successfully`, {
+          model,
+          attempt,
+          timestamp: new Date().toISOString(),
+        });
+        return result;
       } catch (parseError) {
+        console.warn(`${LOG_PREFIX} [API_PARSE] Standard JSON parse failed, trying regex extraction`, {
+          model,
+          attempt,
+          parseError: parseError instanceof Error ? parseError.message : String(parseError),
+          timestamp: new Date().toISOString(),
+        });
+
         const jsonMatch = cleanedText.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
         if (jsonMatch) {
+          console.log(`${LOG_PREFIX} [API_PARSE] Found JSON with regex, parsing`, {
+            model,
+            attempt,
+            matchLength: jsonMatch[0].length,
+            timestamp: new Date().toISOString(),
+          });
           return JSON.parse(jsonMatch[0]) as T;
         }
         throw new Error("Failed to parse JSON from Gemini response");
@@ -138,13 +217,33 @@ async function callGeminiForJSON<T>(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
 
+      console.error(`${LOG_PREFIX} [API_ERROR] Request failed on attempt ${attempt + 1}`, {
+        model,
+        attempt,
+        error: lastError.message,
+        stack: lastError.stack,
+        timestamp: new Date().toISOString(),
+      });
+
       if (attempt < retries) {
         const delay = retryDelayMs * Math.pow(2, attempt);
+        console.log(`${LOG_PREFIX} [API_RETRY] Scheduling retry in ${delay}ms`, {
+          model,
+          attempt,
+          nextAttempt: attempt + 1,
+          delayMs: delay,
+          timestamp: new Date().toISOString(),
+        });
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
 
+  console.error(`${LOG_PREFIX} [API_FATAL] All ${retries + 1} retry attempts exhausted`, {
+    model,
+    lastError: lastError?.message,
+    timestamp: new Date().toISOString(),
+  });
   throw lastError ?? new Error("Unknown error calling Gemini API");
 }
 
@@ -425,25 +524,51 @@ export async function generateFullQuestionBank(
 export async function blindRecheck(
   question: GeneratedQuestion
 ): Promise<{ flagged: boolean; reason?: string }> {
+  console.log(`${LOG_PREFIX} [RECHECK_START] Starting blind recheck for question`, {
+    questionType: question.type,
+    prompt: "prompt" in question ? question.prompt?.substring(0, 100) : "promptTemplate" in question ? question.promptTemplate?.substring(0, 100) : "N/A",
+    timestamp: new Date().toISOString(),
+  });
+
   if (!isGeminiConfigured()) {
+    console.warn(`${LOG_PREFIX} [RECHECK_SKIP] Gemini not configured, using random fallback`, {
+      timestamp: new Date().toISOString(),
+    });
     if (Math.random() < 0.05) {
       return {
         flagged: true,
         reason: "Possible ambiguity detected in question phrasing.",
       };
     }
+    console.log(`${LOG_PREFIX} [RECHECK_COMPLETE] Fallback passed (no flag)`, {
+      timestamp: new Date().toISOString(),
+    });
     return { flagged: false };
   }
 
   try {
+    console.log(`${LOG_PREFIX} [RECHECK_API] Calling Gemini for recheck`, {
+      timestamp: new Date().toISOString(),
+    });
+
     const prompt = recheckQuestionPrompt(question);
     const result = await callGeminiForJSON<RecheckResult>(prompt);
+
+    console.log(`${LOG_PREFIX} [RECHECK_COMPLETE] Recheck finished`, {
+      flagged: result.flagged,
+      reason: result.reason,
+      timestamp: new Date().toISOString(),
+    });
 
     return {
       flagged: result.flagged,
       reason: result.reason,
     };
-  } catch {
+  } catch (error) {
+    console.error(`${LOG_PREFIX} [RECHECK_ERROR] Recheck failed, defaulting to no flag`, {
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+    });
     return { flagged: false };
   }
 }
@@ -452,15 +577,27 @@ export async function proposeLectures(
   materialText: string
 ): Promise<Array<{ title: string; startPage: number; endPage: number }>> {
   if (!isGeminiConfigured()) {
+    console.warn(`${LOG_PREFIX} Gemini not configured, using mock lectures`);
     return generateMockLectures();
   }
 
   try {
+    console.log(`${LOG_PREFIX} Proposing lectures from material`, {
+      textLength: materialText.length,
+      timestamp: new Date().toISOString(),
+    });
     const prompt = proposeLecturesPrompt(materialText);
     const result = await callGeminiForJSON<Array<{ title: string; startPage: number; endPage: number }>>(prompt);
+    console.log(`${LOG_PREFIX} Lecture proposals generated`, {
+      count: result.length,
+      timestamp: new Date().toISOString(),
+    });
     return result;
   } catch (error) {
-    console.error("Lecture proposal failed:", error);
+    console.error(`${LOG_PREFIX} Lecture proposal failed:`, error);
+    if (error instanceof Error) {
+      console.error(`${LOG_PREFIX} Stack:`, error.stack);
+    }
     return generateMockLectures();
   }
 }

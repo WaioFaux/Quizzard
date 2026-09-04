@@ -101,14 +101,13 @@ Return a JSON array of ${count} question objects. Each object must match exactly
   },
   {
     "type": "CALCULATION",
-    "promptTemplate": "A {item} costs ${price}. With {tax_rate}% tax, what is the total?",
+    "promptTemplate": "A store sells {num_items} items at {price_per_item} dollars each. What is the total cost?",
     "variables": [
-      {"name": "item", "min": 1, "max": 10, "decimals": 0},
-      {"name": "price", "min": 10, "max": 100, "decimals": 2},
-      {"name": "tax_rate", "min": 5, "max": 15, "decimals": 1}
+      {"name": "num_items", "min": 1, "max": 10, "decimals": 0},
+      {"name": "price_per_item", "min": 10, "max": 100, "decimals": 2}
     ],
-    "answerFormula": "(price * item) * (1 + tax_rate / 100)",
-    "explanation": "Calculate subtotal, then add tax percentage"
+    "answerFormula": "num_items * price_per_item",
+    "explanation": "Multiply number of items by price per item"
   }
 ]
 \`\`\`

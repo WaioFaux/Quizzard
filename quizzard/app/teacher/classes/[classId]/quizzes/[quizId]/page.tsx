@@ -34,7 +34,9 @@ interface QuizData {
 
 interface PreviewQuestion {
   type: string;
-  content: Record<string, unknown>;
+  prompt?: string;
+  promptTemplate?: string;
+  options?: string[];
 }
 
 export default function QuizConfigPage({
@@ -311,11 +313,11 @@ export default function QuizConfigPage({
                           </Badge>
                         </div>
                         <p className="font-medium">
-                          {String(q.content.prompt || q.content.promptTemplate || "")}
+                          {String(q.prompt || q.promptTemplate || "")}
                         </p>
-                        {q.type === "MCQ" && Array.isArray(q.content.options) && (
+                        {q.type === "MCQ" && Array.isArray(q.options) && (
                           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                            {(q.content.options as string[]).map((opt: string, i: number) => (
+                            {q.options.map((opt: string, i: number) => (
                               <li key={i}>• {opt}</li>
                             ))}
                           </ul>

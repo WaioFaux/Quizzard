@@ -19,6 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { ChatPanel } from "@/components/chat-panel";
 
 interface Material {
   id: string;
@@ -83,6 +84,9 @@ export default function TeacherClassDashboardPage({
   const [isLectureDialogOpen, setIsLectureDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // Chat panel state
+  const [chatMaterialId, setChatMaterialId] = useState<string | null>(null);
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -607,6 +611,34 @@ export default function TeacherClassDashboardPage({
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(material.status)}
+                      {material.status === "PROCESSED" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setChatMaterialId(material.id)}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="mr-2"
+                          >
+                            <path d="M12 8V4H8" />
+                            <rect width="16" height="12" x="4" y="8" rx="2" />
+                            <path d="M2 14h2" />
+                            <path d="M20 14h2" />
+                            <path d="M15 13v2" />
+                            <path d="M9 13v2" />
+                          </svg>
+                          AI Chat
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -814,6 +846,20 @@ export default function TeacherClassDashboardPage({
           )}
         </TabsContent>
       </Tabs>
+
+      {/* AI Chat Panel */}
+      {chatMaterialId && (
+        <ChatPanel
+          materialId={chatMaterialId}
+          classId={classId}
+          isOpen={!!chatMaterialId}
+          onClose={() => {
+            setChatMaterialId(null);
+            fetchClass();
+          }}
+          onLecturesCreated={() => fetchClass()}
+        />
+      )}
     </div>
   );
 }

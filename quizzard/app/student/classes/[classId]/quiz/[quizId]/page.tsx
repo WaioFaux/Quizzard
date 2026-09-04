@@ -45,10 +45,11 @@ export default function QuizIntroPage({
 
   async function fetchQuiz() {
     try {
-      // For intro page, we need quiz details - fetch from the quiz endpoint
-      const res = await fetch(`/api/quizzes/${quizId}`);
+      // Fetch quiz details using student-accessible endpoint
+      const res = await fetch(`/api/quizzes/${quizId}/info`);
+
       if (!res.ok) {
-        // Try student-specific quiz endpoint
+        // Try to check for existing attempts
         const studentRes = await fetch(`/api/attempts?quizId=${quizId}`);
         const data = await studentRes.json();
         if (data.data?.length > 0) {

@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuestionType } from "@prisma/client";
+import { QBChatPanel } from "@/components/qb-chat-panel";
 
 interface Question {
   id: string;
@@ -62,7 +63,9 @@ export default function QuestionBankPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Chat panel state
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [questionForm, setQuestionForm] = useState({
     type: "MCQ" as QuestionType,
@@ -108,39 +111,13 @@ export default function QuestionBankPage({
     }
   }
 
-  async function handleGenerateQuestions() {
-    setIsGenerating(true);
-    try {
-      const res = await fetch(`/api/quizzes/${quizId}/question-bank/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instructions: quiz?.instructions || "",
-          count: (quiz?.questionsPerAttempt || 10) * 5,
-        }),
-      });
+  function handleOpenChat() {
+    setIsChatOpen(true);
+  }
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to generate questions");
-      }
-
-      toast({
-        title: "Success",
-        description: "Questions generated successfully",
-      });
-
-      fetchData();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate questions",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+  function handleQuestionsCreated() {
+    fetchData();
+    setIsChatOpen(false);
   }
 
   async function handleAddQuestion(e: React.FormEvent) {
@@ -433,8 +410,8 @@ export default function QuestionBankPage({
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={handleGenerateQuestions}
-            disabled={isGenerating}
+            onClick={handleOpenChat}
+            disabled={isChatOpen}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -448,9 +425,9 @@ export default function QuestionBankPage({
               strokeLinejoin="round"
               className="mr-2"
             >
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" />
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            {isGenerating ? "Generating..." : "Generate with AI"}
+            Generate with AI
           </Button>
           <Dialog open={isAddingQuestion} onOpenChange={setIsAddingQuestion}>
             <DialogTrigger asChild>
@@ -794,6 +771,14 @@ export default function QuestionBankPage({
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* AI Chat Panel for Question Generation */}
+      <QBChatPanel
+        quizId={quizId}
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        onQuestionsCreated={handleQuestionsCreated}
+      />
     </div>
   );
 }

@@ -231,6 +231,42 @@ export async function extendDeadline(
   });
 }
 
+export async function getQuizForStudent(quizId: string, studentId: string) {
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: quizId },
+    include: {
+      lecture: {
+        select: {
+          id: true,
+          title: true,
+          class: {
+            select: {
+              id: true,
+              name: true,
+              enrollments: {
+                where: { studentId },
+                select: { studentId: true },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!quiz) {
+    throw new NotFoundError("Quiz");
+  }
+
+  // Check if student is enrolled in the class
+  const isEnrolled = quiz.lecture.class.enrollments.length > 0;
+  if (!isEnrolled) {
+    throw new AuthorizationError("You are not enrolled in this class");
+  }
+
+  return quiz;
+}
+
 export async function getLeaderboard(
   quizId: string,
   userId: string,
