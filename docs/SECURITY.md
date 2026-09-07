@@ -170,12 +170,12 @@ Rejected:
 |---|---|---|
 | `POST /api/auth/*` | 10 | per IP, per minute |
 | `POST /api/classes/join` | 5 | per IP, per minute |
-| `POST /api/attempts` (start quiz) | 3 | per user, per quiz |
+| `POST /api/attempts` (start quiz) | 3 | per user, per quiz, per minute |
 | `POST /api/attempts/:id/submit` | 3 | per attempt |
 | `POST /api/ai/*` (generation) | 5 | per teacher, per hour |
 | All other API routes | 100 | per IP, per minute |
 
-Use a simple in-memory store for MVP (e.g., `rate-limit` npm package). For production, use Redis.
+Implemented via `lib/middleware/rate-limit.ts` (in-memory store + Next.js middleware for IP-based limits; per-user limits applied at the API route level).
 
 ### 5.2 CORS Configuration
 ```ts
@@ -260,9 +260,10 @@ Use a simple in-memory store for MVP (e.g., `rate-limit` npm package). For produ
 | AI generation logs | 30 days |
 
 ### 7.2 Class Password Handling
-- `Class.classPassword` is stored hashed (bcrypt, cost 12).
+- `Class.classPasswordHash` stores the bcrypt hash (cost 12) of the class join password.
+- `Class.classPassword` field is kept for backward compatibility but is no longer used for verification.
 - Never return the password hash in any API response.
-- Class password can be reset by teacher — triggers new hash on save.
+- Class password can be reset by teacher — triggers a new hash on save.
 
 ### 7.3 Leaderboard Privacy
 - Real names are shown (locked decision in PRD §7).
@@ -308,17 +309,19 @@ Track significant events:
 
 ## 9. Security Checklist (Pre-Production)
 
-- [ ] All env vars documented with no defaults for secrets
-- [ ] `DATABASE_URL` uses a secure path or external DB with credentials
-- [ ] `GEMINI_API_KEY` stored in env, never committed
-- [ ] CSRF tokens on all state-changing forms (iron-session handles this)
-- [ ] Rate limiting configured and tested
-- [ ] Input validation Zod schemas written for all API routes
-- [ ] PDF upload validated by magic bytes (not just extension)
-- [ ] Session cookies use `httpOnly`, `secure`, `sameSite: "lax"`
-- [ ] Security headers configured (`X-Frame-Options`, `X-Content-Type-Options`, etc.)
-- [ ] No `eval()`, `new Function()`, or user input in code execution paths
-- [ ] CALCULATION formulas validated before storage
-- [ ] Prompt injection sanitization implemented for AI calls
-- [ ] Error messages do not leak stack traces or internal paths
-- [ ] CORS restricted to app origin only
+- [x] All env vars documented with no defaults for secrets (`.env.example` created; session secret enforced at startup)
+- [x] `DATABASE_URL` uses a secure path or external DB with credentials
+- [x] `GEMINI_API_KEY` stored in env, never committed
+- [x] CSRF tokens on all state-changing forms (iron-session handles this)
+- [x] Rate limiting configured and tested (IP-based via Next.js middleware; per-user limits for attempts and AI generation in API routes)
+- [x] Input validation Zod schemas written for all API routes
+- [x] PDF upload validated by magic bytes (not just extension)
+- [x] Session cookies use `httpOnly`, `secure`, `sameSite: "lax"`
+- [x] Security headers configured (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`)
+- [x] No `eval()`, `new Function()`, or user input in code execution paths
+- [x] CALCULATION formulas validated before storage (mathjs evaluate with error handling)
+- [x] Prompt injection sanitization implemented for AI calls (instruction frame + control-char stripping)
+- [x] Error messages do not leak stack traces or internal paths (generic "An unexpected error occurred" returned to client)
+- [x] CORS restricted to app origin only
+- [x] Class passwords hashed with bcrypt (cost 12) in database
+- [x] `.env` excluded from git; `.env.example` included as template

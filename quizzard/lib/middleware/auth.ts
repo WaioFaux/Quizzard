@@ -20,8 +20,19 @@ export interface SessionOptions {
   };
 }
 
+function _getSessionPassword(): string {
+  const secret = process.env.SESSION_SECRET;
+  if (!secret) {
+    throw new Error(
+      "SESSION_SECRET environment variable is not set. " +
+      "Please set it to a secure random string of at least 32 characters in your .env file."
+    );
+  }
+  return secret;
+}
+
 export const sessionOptions: SessionOptions = {
-  password: process.env.SESSION_SECRET ?? "complex_password_at_least_32_characters_long",
+  password: _getSessionPassword(),
   cookieName: "quizzard_session",
   cookieOptions: {
     httpOnly: true,

@@ -149,8 +149,8 @@ describe("Calculation Strategy", () => {
       type: "CALCULATION" as const,
       promptTemplate: "{a} + {b} = ?",
       variables: [
-        { name: "a", min: 1, max: 10 },
-        { name: "b", min: 1, max: 10 },
+        { name: "a", min: 1, max: 10, decimals: 0 },
+        { name: "b", min: 1, max: 10, decimals: 0 },
       ],
       answerFormula: "a + b",
     };

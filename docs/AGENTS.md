@@ -6,6 +6,13 @@ Root context for AI coding agents (Cursor Agent Mode). Read this first, in full,
 
 Quizzard is a quiz platform built around a teacher → AI → teacher-approval → student pipeline: a teacher configures instructions for a lecture, the AI generates a fixed pool of questions, the teacher reviews and publishes that pool, and each student who takes the quiz draws a randomized subset from that same approved pool. It is **not** a tool that generates a fresh quiz per student in real time.
 
+## Security rules (always apply)
+
+- **Never use raw SQL.** Use Prisma's parameterized queries exclusively. If a query cannot be expressed through Prisma, flag it instead of reaching for `prisma.$queryRaw` or `$executeRaw`.
+- **Never expose `dangerouslySetInnerHTML`** for user-generated content.
+- **Never return error stack traces to the client.** Use `handleApiError()` from `lib/utils/error-handler.ts` for all API route error responses.
+- **Never use `eval()` or `new Function()`** for user-submitted content.
+
 ## Tech stack (do not substitute or add alternatives)
 
 - Next.js (App Router) + TypeScript

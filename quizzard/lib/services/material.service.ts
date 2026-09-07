@@ -1,11 +1,27 @@
 import path from "path";
 import fs from "fs/promises";
 import { prisma } from "../db";
-import { NotFoundError, AuthorizationError } from "../utils/errors";
+import { NotFoundError, AuthorizationError, ValidationError } from "../utils/errors";
 import { extractTextFromPDF, truncateText } from "../pdf/extract";
 import { logger } from "../utils/logger";
 
 const UPLOAD_DIR = process.env.FILE_STORAGE_PATH ?? "./public/uploads";
+
+// Max file size: 50 MB
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+
+// PDF magic bytes (file signature)
+const PDF_MAGIC_BYTES = Buffer.from("%PDF-", "ascii");
+
+function validatePdfMagicBytes(buffer: Buffer): void {
+  if (buffer.length < PDF_MAGIC_BYTES.length) {
+    throw new ValidationError("File is too small to be a valid PDF");
+  }
+  const header = buffer.slice(0, PDF_MAGIC_BYTES.length);
+  if (!header.equals(PDF_MAGIC_BYTES)) {
+    throw new ValidationError("File does not have a valid PDF signature");
+  }
+}
 
 export async function uploadMaterial(
   classId: string,
@@ -21,13 +37,27 @@ export async function uploadMaterial(
     throw new AuthorizationError("You do not own this class");
   }
 
+  // Enforce file size limit
+  if (file.data.length > MAX_FILE_SIZE_BYTES) {
+    throw new ValidationError("File exceeds maximum size of 50 MB");
+  }
+
+  // Validate magic bytes to ensure the file is actually a PDF
+  validatePdfMagicBytes(file.data);
+
+  // Validate extension is .pdf
+  const ext = path.extname(file.filename).toLowerCase();
+  if (ext !== ".pdf") {
+    throw new ValidationError("Only PDF files are allowed");
+  }
+
   // Ensure upload directory exists
   const uploadDir = path.resolve(UPLOAD_DIR);
   await fs.mkdir(uploadDir, { recursive: true });
 
   // Generate unique filename
-  const ext = path.extname(file.filename);
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+  const safeExt = ".pdf"; // Always use .pdf since we validated the content above
+  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`;
   const filePath = path.join(uploadDir, uniqueName);
   const publicPath = `/uploads/${uniqueName}`;
 

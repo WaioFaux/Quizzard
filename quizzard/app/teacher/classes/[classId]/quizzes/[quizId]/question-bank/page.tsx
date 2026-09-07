@@ -115,8 +115,8 @@ export default function QuestionBankPage({
     setIsChatOpen(true);
   }
 
-  function handleQuestionsCreated() {
-    fetchData();
+  async function handleQuestionsCreated() {
+    await fetchData();
     setIsChatOpen(false);
   }
 

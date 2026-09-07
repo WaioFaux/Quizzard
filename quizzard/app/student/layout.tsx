@@ -14,10 +14,10 @@ export default async function StudentLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen overflow-hidden">
       <StudentSidebar studentName={session.name} />
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-slate-50">
+      <main className="flex-1 overflow-y-auto bg-slate-950">
         {children}
       </main>
     </div>

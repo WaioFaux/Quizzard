@@ -9,6 +9,7 @@ function isCalculationContent(content: unknown): boolean {
     c.type === "CALCULATION" &&
     typeof c.promptTemplate === "string" &&
     Array.isArray(c.variables) &&
+    c.variables.length > 0 &&
     c.variables.every(
       (v: unknown) =>
         typeof v === "object" &&

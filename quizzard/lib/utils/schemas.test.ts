@@ -13,7 +13,7 @@ import {
   SubmitAttemptSchema,
   CreateReportSchema,
   SourceRefSchema,
-} from "./schemas";
+} from "../validation/schemas";
 
 describe("SignupSchema", () => {
   it("should accept valid teacher signup", () => {
@@ -220,7 +220,7 @@ describe("JoinClassSchema", () => {
 describe("CreateQuizSchema", () => {
   it("should accept valid quiz", () => {
     const result = CreateQuizSchema.safeParse({
-      lectureId: "cld123",
+      lectureId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
       instructions: "Focus on chapters 1-3",
       questionsPerAttempt: 10,
       timeLimitMinutes: 30,
@@ -230,7 +230,7 @@ describe("CreateQuizSchema", () => {
 
   it("should accept with optional deadline", () => {
     const result = CreateQuizSchema.safeParse({
-      lectureId: "cld123",
+      lectureId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
       instructions: "Focus on chapters 1-3",
       questionsPerAttempt: 10,
       timeLimitMinutes: 30,
@@ -241,7 +241,7 @@ describe("CreateQuizSchema", () => {
 
   it("should reject questionsPerAttempt less than 1", () => {
     const result = CreateQuizSchema.safeParse({
-      lectureId: "cld123",
+      lectureId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
       instructions: "Focus",
       questionsPerAttempt: 0,
       timeLimitMinutes: 30,
@@ -251,7 +251,7 @@ describe("CreateQuizSchema", () => {
 
   it("should reject timeLimitMinutes greater than 300", () => {
     const result = CreateQuizSchema.safeParse({
-      lectureId: "cld123",
+      lectureId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
       instructions: "Focus",
       questionsPerAttempt: 10,
       timeLimitMinutes: 301,
@@ -322,7 +322,7 @@ describe("SubmitAttemptSchema", () => {
     const result = SubmitAttemptSchema.safeParse({
       answers: [
         {
-          questionBankItemId: "qid123",
+          questionBankItemId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
           answer: { type: "MCQ", selectedOptionIndex: 2 },
         },
       ],
@@ -333,9 +333,9 @@ describe("SubmitAttemptSchema", () => {
   it("should accept with multiple answer types", () => {
     const result = SubmitAttemptSchema.safeParse({
       answers: [
-        { questionBankItemId: "q1", answer: { type: "MCQ", selectedOptionIndex: 1 } },
-        { questionBankItemId: "q2", answer: { type: "SHORT_ANSWER", text: "Paris" } },
-        { questionBankItemId: "q3", answer: { type: "CALCULATION", value: 42.5 } },
+        { questionBankItemId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01", answer: { type: "MCQ", selectedOptionIndex: 1 } },
+        { questionBankItemId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx02", answer: { type: "SHORT_ANSWER", text: "Paris" } },
+        { questionBankItemId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx03", answer: { type: "CALCULATION", value: 42.5 } },
       ],
     });
     expect(result.success).toBe(true);
@@ -352,7 +352,7 @@ describe("SubmitAttemptSchema", () => {
 describe("CreateReportSchema", () => {
   it("should accept valid report", () => {
     const result = CreateReportSchema.safeParse({
-      studentAnswerId: "ans123",
+      studentAnswerId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
       description: "I believe this question has an error because the options are incorrect.",
     });
     expect(result.success).toBe(true);
@@ -360,7 +360,7 @@ describe("CreateReportSchema", () => {
 
   it("should reject description too short", () => {
     const result = CreateReportSchema.safeParse({
-      studentAnswerId: "ans123",
+      studentAnswerId: "cldxxxxxxxxxxxxxxxxxxxxxxxxxx01",
       description: "Wrong.",
     });
     expect(result.success).toBe(false);

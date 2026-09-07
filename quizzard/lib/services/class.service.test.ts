@@ -22,6 +22,17 @@ vi.mock("../db", () => ({
   },
 }));
 
+// Mock bcrypt for class password hashing
+vi.mock("bcryptjs", () => ({
+  default: {
+    hash: vi.fn().mockResolvedValue("$2b$12$hashedpassword"),
+    compare: vi.fn().mockImplementation((password: string, hash: string) => {
+      // For tests: any password matches a hash of "correct-password"
+      return Promise.resolve(password === "correct-password");
+    }),
+  },
+}));
+
 import { prisma } from "../db";
 
 describe("Class Service (mocked)", () => {
@@ -186,7 +197,7 @@ describe("Class Service (mocked)", () => {
         teacher: { id: "teacher-1", name: "Teacher", email: "t@t.com" },
         materials: [],
         lectures: [],
-        enrollments: [{ id: "e1", student: { id: "other-student", name: "Other", email: "o@o.com" }, joinedAt: new Date(), class: {} as never, student: {} as never }],
+        enrollments: [{ id: "e1", student: { id: "other-student", name: "Other", email: "o@o.com" }, joinedAt: new Date(), class: {} as never }],
       });
 
       const { getClassById } = await import("../services/class.service");

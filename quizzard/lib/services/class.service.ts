@@ -2,6 +2,9 @@ import { prisma } from "../db";
 import { ConflictError, NotFoundError, AuthorizationError } from "../utils/errors";
 import { CreateClassInput, UpdateClassInput } from "../validation/schemas";
 import { Role } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+const CLASS_PASSWORD_SALT_ROUNDS = 12;
 
 function generateClassCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -26,12 +29,16 @@ export async function createClass(
     attempts++;
   }
 
+  // Hash the class password for secure storage
+  const classPasswordHash = await bcrypt.hash(input.classPassword, CLASS_PASSWORD_SALT_ROUNDS);
+
   const cls = await prisma.class.create({
     data: {
       name: input.name,
       description: input.description,
       classCode,
       classPassword: input.classPassword,
+      classPasswordHash,
       teacherId,
     },
     include: {
@@ -177,12 +184,18 @@ export async function updateClass(
     throw new AuthorizationError("You do not own this class");
   }
 
+  // Re-hash the new password if it is being updated
+  const classPasswordHash = input.classPassword
+    ? await bcrypt.hash(input.classPassword, CLASS_PASSWORD_SALT_ROUNDS)
+    : cls.classPasswordHash;
+
   return prisma.class.update({
     where: { id: classId },
     data: {
       name: input.name ?? cls.name,
       description: input.description !== undefined ? input.description : cls.description,
       classPassword: input.classPassword ?? cls.classPassword,
+      classPasswordHash,
     },
   });
 }
@@ -210,7 +223,8 @@ export async function joinClass(studentId: string, classCode: string, classPassw
     throw new NotFoundError("Class");
   }
 
-  if (cls.classPassword !== classPassword) {
+  const valid = await bcrypt.compare(classPassword, cls.classPasswordHash);
+  if (!valid) {
     throw new AuthorizationError("Invalid class password");
   }
 

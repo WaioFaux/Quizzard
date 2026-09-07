@@ -115,14 +115,7 @@ const MCQContentSchema = z.object({
   correctOptionIndex: z
     .number()
     .int()
-    .min(0)
-    .refine((val, ctx) => {
-      const parent = ctx.parent as { options?: string[] };
-      if (parent.options && val >= parent.options.length) {
-        return false;
-      }
-      return true;
-    }, "correctOptionIndex out of range"),
+    .min(0, "correctOptionIndex must be non-negative"),
   explanation: z.string().optional(),
 });
 

@@ -220,3 +220,48 @@ export async function deleteQuestion(questionId: string, teacherId: string) {
 
   await prisma.questionBankItem.delete({ where: { id: questionId } });
 }
+
+export async function bulkCreateQuestions(
+  quizId: string,
+  teacherId: string,
+  questions: Array<{
+    type: import("@prisma/client").QuestionType;
+    content: Record<string, unknown>;
+  }>
+) {
+  // Verify quiz ownership
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: quizId },
+    include: {
+      lecture: {
+        select: { class: { select: { teacherId: true } } },
+      },
+    },
+  });
+
+  if (!quiz) {
+    throw new NotFoundError("Quiz");
+  }
+
+  if (quiz.lecture.class.teacherId !== teacherId) {
+    throw new AuthorizationError("You do not own this quiz");
+  }
+
+  if (quiz.status === QuizStatus.PUBLISHED) {
+    throw new QuizAlreadyPublishedError();
+  }
+
+  if (questions.length === 0) return [];
+
+  const created = await prisma.questionBankItem.createMany({
+    data: questions.map((q) => ({
+      quizId,
+      type: q.type,
+      content: q.content as object,
+      status: QuestionStatus.APPROVED,
+      source: QuestionSource.UPLOADED,
+    })),
+  });
+
+  return created;
+}
