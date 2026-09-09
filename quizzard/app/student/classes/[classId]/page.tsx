@@ -21,6 +21,14 @@ interface Lecture {
   } | null;
 }
 
+interface Attempt {
+  id: string;
+  quizId: string;
+  status: string;
+  score: number | null;
+  createdAt: string;
+}
+
 interface ClassData {
   id: string;
   name: string;
@@ -47,10 +55,11 @@ export default function StudentClassOverviewPage({
 
   const [cls, setClass] = useState<ClassData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [attempts, setAttempts] = useState<Record<string, string>>({});
+  const [attempts, setAttempts] = useState<Record<string, Attempt>>({});
 
   useEffect(() => {
     fetchClass();
+    fetchAttempts();
   }, [classId]);
 
   async function fetchClass() {
@@ -71,11 +80,32 @@ export default function StudentClassOverviewPage({
     }
   }
 
+  async function fetchAttempts() {
+    try {
+      const res = await fetch("/api/attempts");
+      const data = await res.json();
+      if (data.data && Array.isArray(data.data)) {
+        // Build a map of quizId -> attempt for quick lookup
+        const attemptMap: Record<string, Attempt> = {};
+        for (const attempt of data.data) {
+          // Only keep the most recent attempt per quiz
+          if (!attemptMap[attempt.quizId] || 
+              new Date(attempt.createdAt) > new Date(attemptMap[attempt.quizId].createdAt)) {
+            attemptMap[attempt.quizId] = attempt;
+          }
+        }
+        setAttempts(attemptMap);
+      }
+    } catch (error) {
+      console.error("Failed to fetch attempts:", error);
+    }
+  }
+
   function getQuizStatus(quiz: Lecture["quiz"]) {
     if (!quiz) return null;
 
-    const attemptId = attempts[quiz.id];
-    if (attemptId) {
+    const attempt = attempts[quiz.id];
+    if (attempt) {
       return { label: "Completed", variant: "default" as const };
     }
 
@@ -180,7 +210,9 @@ export default function StudentClassOverviewPage({
           cls.lectures.map((lecture) => {
             const quiz = lecture.quiz;
             const status = getQuizStatus(quiz);
-            const canStart = quiz?.status === "PUBLISHED" && !attempts[quiz.id];
+            const attempt = quiz ? attempts[quiz.id] : null;
+            const isCompleted = !!attempt;
+            const isAvailable = quiz?.status === "PUBLISHED" && !isCompleted;
 
             return (
               <Card key={lecture.id}>
@@ -206,23 +238,23 @@ export default function StudentClassOverviewPage({
                     {status && (
                       <Badge variant={status.variant}>{status.label}</Badge>
                     )}
-                    {canStart && (
+                    {isCompleted && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          router.push(`/student/classes/${classId}/quiz/${quiz?.id}/results?attemptId=${attempt.id}`)
+                        }
+                      >
+                        View Results
+                      </Button>
+                    )}
+                    {isAvailable && (
                       <Button
                         size="sm"
                         onClick={() => router.push(`/student/classes/${classId}/quiz/${quiz.id}`)}
                       >
                         Start Quiz
-                      </Button>
-                    )}
-                    {attempts[quiz?.id || ""] && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          router.push(`/student/classes/${classId}/quiz/${quiz?.id}/results`)
-                        }
-                      >
-                        View Results
                       </Button>
                     )}
                   </div>

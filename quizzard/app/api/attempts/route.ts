@@ -6,6 +6,47 @@ import { ValidationError, AppError } from "@/lib/utils/errors";
 import { startAttempt } from "@/lib/services/attempt.service";
 import { logger } from "@/lib/utils/logger";
 import { checkAttemptStartRateLimit } from "@/lib/middleware/rate-limit";
+import { prisma } from "@/lib/db";
+import { AttemptStatus } from "@prisma/client";
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = await requireStudent();
+    const { searchParams } = new URL(req.url);
+    const quizId = searchParams.get("quizId");
+
+    const where: { studentId: string; quizId?: string } = {
+      studentId: session.userId,
+    };
+
+    if (quizId) {
+      where.quizId = quizId;
+    }
+
+    const attempts = await prisma.studentAttempt.findMany({
+      where,
+      include: {
+        quiz: {
+          select: {
+            id: true,
+            lecture: {
+              select: {
+                title: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return Response.json({ data: attempts });
+  } catch (err) {
+    return handleApiError(err);
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
