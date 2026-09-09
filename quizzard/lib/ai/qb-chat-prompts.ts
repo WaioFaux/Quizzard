@@ -3,15 +3,37 @@
  * Two-phase approach: Generate questions with user confirmation
  */
 
+export type QuestionType = "MCQ" | "SHORT_ANSWER" | "CALCULATION";
+export type DifficultyLevel = "easy" | "medium" | "hard";
+
+export interface DifficultyDistribution {
+  easy: number;
+  medium: number;
+  hard: number;
+}
+
+export interface TypeConfig {
+  enabled: boolean;
+  count: number;
+  distribution: DifficultyDistribution; // easy + medium + hard must equal count
+}
+
+export interface GenerationPlan {
+  MCQ: TypeConfig;
+  SHORT_ANSWER: TypeConfig;
+  CALCULATION: TypeConfig;
+  customInstructions?: string;
+}
+
 export interface QuestionGenerationConfig {
   count: number;
-  questionTypes: ("MCQ" | "SHORT_ANSWER" | "CALCULATION")[];
-  difficulty: "easy" | "medium" | "hard";
+  questionTypes: QuestionType[];
+  difficulty: DifficultyLevel;
   customInstructions?: string;
 }
 
 export interface QuestionProposal {
-  type: "MCQ" | "SHORT_ANSWER" | "CALCULATION";
+  type: QuestionType;
   prompt: string;
   options?: string[];
   correctOptionIndex?: number;
@@ -25,13 +47,6 @@ export interface QuestionProposal {
   }>;
   answerFormula?: string;
   explanation?: string;
-}
-
-export interface GenerationPlan {
-  count: number;
-  questionTypes: string[];
-  difficulty: string;
-  customInstructions?: string;
 }
 
 export interface GenerationResult {
@@ -102,7 +117,7 @@ Return your response as JSON:
 }
 
 /**
- * Generate questions based on configuration
+ * Generate questions based on configuration (legacy flat config)
  */
 export function getGenerationPrompt(
   topic: string,
@@ -159,6 +174,99 @@ Requirements:
 - SHORT_ANSWER requires a concise, verifiable answer
 - CALCULATION requires valid formula and variables
 - All questions should match the specified difficulty
+- Return ONLY the JSON, no additional text`;
+}
+
+/**
+ * Generate questions for a specific type and difficulty bucket.
+ * Used when the plan has per-type and per-difficulty configuration.
+ */
+export function getTypeDifficultyPrompt(
+  topic: string,
+  questionType: QuestionType,
+  difficulty: DifficultyLevel,
+  count: number,
+  customInstructions?: string,
+  materialText?: string
+): string {
+  const difficultyDesc: Record<DifficultyLevel, string> = {
+    easy: "Basic recall and understanding — straightforward questions testing fundamental knowledge",
+    medium: "Application and analysis — questions requiring applying concepts to new situations",
+    hard: "Synthesis and evaluation — complex questions requiring deeper reasoning and analysis",
+  };
+
+  const typeDesc: Record<QuestionType, string> = {
+    MCQ: "Multiple choice questions with 4 distinct options (A, B, C, D). One correct answer.",
+    SHORT_ANSWER: "Open-ended questions with a concise, verifiable correct answer.",
+    CALCULATION: "Math or physics problems with variable substitution. Include a promptTemplate with {variable} placeholders, a variables array defining min/max/decimals, and an answerFormula.",
+  };
+
+  const materialSection = materialText
+    ? `\n\nUse this material as context:\n${materialText.slice(0, 10000)}${materialText.length > 10000 ? "\n\n[... content truncated ...]" : ""}`
+    : "";
+
+  const mcqOutput = `    {
+      "type": "${questionType}",
+      "prompt": "Question text here",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctOptionIndex": 0,
+      "explanation": "Why this answer is correct"
+    }`;
+
+  const shortAnswerOutput = `    {
+      "type": "${questionType}",
+      "prompt": "Question text here",
+      "correctAnswer": "The correct answer",
+      "explanation": "Optional explanation"
+    }`;
+
+  const calcOutput = `    {
+      "type": "${questionType}",
+      "promptTemplate": "A store sells {num_items} items at {price_per_item} dollars each. What is the total cost?",
+      "variables": [
+        {"name": "num_items", "min": 1, "max": 10, "decimals": 0},
+        {"name": "price_per_item", "min": 10, "max": 100, "decimals": 2}
+      ],
+      "answerFormula": "num_items * price_per_item",
+      "explanation": "Step-by-step explanation"
+    }`;
+
+  const questionsBlock =
+    questionType === "MCQ"
+      ? mcqOutput
+      : questionType === "SHORT_ANSWER"
+      ? shortAnswerOutput
+      : calcOutput;
+
+  const typeRequirements =
+    questionType === "MCQ"
+      ? "Exactly 4 distinct, plausible options. The wrong options should be plausible distractors."
+      : questionType === "SHORT_ANSWER"
+      ? "The answer must be concise and verifiable against the material."
+      : "Variables must be numeric. The formula must use the exact variable names defined.";
+
+  return `Generate ${count} ${difficulty} ${questionType} question(s) for the topic: "${topic}"${customInstructions ? `\nCustom instructions: ${customInstructions}` : ""}${materialSection}
+
+## Question Type: ${questionType}
+${typeDesc[questionType]}
+
+## Difficulty: ${difficulty}
+${difficultyDesc[difficulty]}
+
+## Output Format:
+Return a JSON object:
+\`\`\`json
+{
+  "questions": [
+${questionsBlock}
+  ]
+}
+\`\`\`
+
+Requirements:
+- Generate exactly ${count} question(s) at ${difficulty} difficulty
+- ${typeRequirements}
+- Questions must genuinely be ${difficulty} difficulty
 - Return ONLY the JSON, no additional text`;
 }
 

@@ -1,45 +1,23 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import {
+  GenerationPlan,
+  TypeConfig,
+  DifficultyLevel,
+} from "@/lib/ai/qb-chat-prompts";
 
-interface GenerationPlan {
-  count: number;
-  questionTypes: string[];
-  difficulty: string;
-  customInstructions?: string;
-}
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
-interface QBChatPanelProps {
-  quizId: string;
-  isOpen: boolean;
-  onClose: () => void;
-  onQuestionsCreated?: () => void;
-}
-
-interface ChatState {
-  messages: ChatMessage[];
-  plan: GenerationPlan | null;
-  readyToGenerate: boolean;
-  phase: "configuring" | "generating" | "reviewing" | "completed";
-}
+type QuestionType = keyof Pick<GenerationPlan, "MCQ" | "SHORT_ANSWER" | "CALCULATION">;
 
 interface GenerationStep {
   id: string;
@@ -48,17 +26,80 @@ interface GenerationStep {
   error?: string;
 }
 
-const QUESTION_TYPES = [
-  { value: "MCQ", label: "Multiple Choice (MCQ)" },
-  { value: "SHORT_ANSWER", label: "Short Answer" },
-  { value: "CALCULATION", label: "Calculation" },
-];
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
-const DIFFICULTIES = [
-  { value: "easy", label: "Easy" },
-  { value: "medium", label: "Medium" },
-  { value: "hard", label: "Hard" },
-];
+const TYPE_META: Record<QuestionType, { label: string; description: string }> = {
+  MCQ: {
+    label: "Multiple Choice (MCQ)",
+    description: "4-option multiple choice with one correct answer",
+  },
+  SHORT_ANSWER: {
+    label: "Short Answer",
+    description: "Open-ended questions with a concise correct answer",
+  },
+  CALCULATION: {
+    label: "Calculation",
+    description: "Math/physics problems with variable substitution",
+  },
+};
+
+const DIFFICULTIES: DifficultyLevel[] = ["easy", "medium", "hard"];
+
+function getDefaultTypeConfig(): TypeConfig {
+  return {
+    enabled: false,
+    count: 0,
+    distribution: { easy: 0, medium: 0, hard: 0 },
+  };
+}
+
+function getDefaultPlan(): GenerationPlan {
+  return {
+    MCQ: { ...getDefaultTypeConfig(), enabled: true, count: 5, distribution: { easy: 2, medium: 2, hard: 1 } },
+    SHORT_ANSWER: { ...getDefaultTypeConfig(), enabled: true, count: 5, distribution: { easy: 2, medium: 2, hard: 1 } },
+    CALCULATION: getDefaultTypeConfig(),
+  };
+}
+
+function validatePlan(plan: GenerationPlan): string | null {
+  const enabledTypes = (["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).filter(
+    (t) => plan[t].enabled
+  );
+  if (enabledTypes.length === 0) return "Enable at least one question type.";
+  for (const t of enabledTypes) {
+    const cfg = plan[t];
+    const { easy, medium, hard } = cfg.distribution;
+    if (cfg.count < 1) return `${TYPE_META[t].label}: set a count of at least 1.`;
+    if (easy + medium + hard !== cfg.count) {
+      return `${TYPE_META[t].label}: easy (${easy}) + medium (${medium}) + hard (${hard}) must equal count (${cfg.count}).`;
+    }
+  }
+  return null;
+}
+
+function getTotalCount(plan: GenerationPlan): number {
+  return (["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).reduce(
+    (sum, t) => sum + (plan[t].enabled ? plan[t].count : 0),
+    0
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+interface QBChatPanelProps {
+  quizId: string;
+  isOpen: boolean;
+  onClose: () => void;
+  onQuestionsCreated?: () => void;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function QBChatPanel({
   quizId,
@@ -66,692 +107,536 @@ export function QBChatPanel({
   onClose,
   onQuestionsCreated,
 }: QBChatPanelProps) {
-  const [input, setInput] = useState("");
+  const [plan, setPlan] = useState<GenerationPlan>(getDefaultPlan);
+  const [customInstructions, setCustomInstructions] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "generating" | "completed" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [chatState, setChatState] = useState<ChatState | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Generation progress tracking
-  const [generationSteps, setGenerationSteps] = useState<GenerationStep[]>([
-    { id: "validate", label: "Validating configuration", status: "pending" },
-    { id: "generate", label: "Generating questions with AI", status: "pending" },
-    { id: "recheck", label: "AI quality review (blind recheck)", status: "pending" },
-    { id: "save", label: "Saving questions to database", status: "pending" },
-    { id: "complete", label: "Generation complete", status: "pending" },
-  ]);
+  const [generationSteps, setGenerationSteps] = useState<GenerationStep[]>([]);
   const [currentStepIndex, setCurrentStepIndex] = useState(-1);
-  const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // Plan configuration state
-  const [configCount, setConfigCount] = useState(10);
-  const [configTypes, setConfigTypes] = useState<string[]>(["MCQ"]);
-  const [configDifficulty, setConfigDifficulty] = useState("medium");
-  const [configInstructions, setConfigInstructions] = useState("");
+  // Session state
+  const [sessionStarted, setSessionStarted] = useState(false);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  // ---------------------------------------------------------------------------
+  // Start session on mount (no blocking AI call)
+  // ---------------------------------------------------------------------------
 
-  // Helper function to update generation progress
-  const updateGenerationStep = (stepId: string, status: GenerationStep["status"], error?: string) => {
+  useEffect(() => {
+    if (!isOpen || sessionStarted) return;
+
+    const start = async () => {
+      try {
+        const res = await fetch(`/api/quizzes/${quizId}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "start", quizId }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.data?.plan) {
+            setPlan(data.data.plan);
+            setCustomInstructions(data.data.plan.customInstructions ?? "");
+          }
+        }
+      } catch {
+        // Ignore session start errors — the panel still works with defaults
+      }
+      setSessionStarted(true);
+    };
+
+    start();
+  }, [isOpen, quizId, sessionStarted]);
+
+  // ---------------------------------------------------------------------------
+  // Sync plan from state to local plan object
+  // ---------------------------------------------------------------------------
+
+  const planWithInstructions: GenerationPlan = {
+    ...plan,
+    customInstructions: customInstructions || undefined,
+  };
+
+  // ---------------------------------------------------------------------------
+  // Update type config helpers
+  // ---------------------------------------------------------------------------
+
+  function updateType(type: QuestionType, updates: Partial<TypeConfig>) {
+    setPlan((prev) => {
+      const prevCfg = prev[type];
+      const newCfg: TypeConfig = { ...prevCfg, ...updates };
+
+      // When count changes, auto-distribute proportionally across difficulties
+      if ("count" in updates && updates.count !== prevCfg.count) {
+        const newCount = updates.count ?? 0;
+        const dist = prevCfg.distribution;
+        if (newCount === 0) {
+          newCfg.distribution = { easy: 0, medium: 0, hard: 0 };
+        } else {
+          // Simple round-robin-ish distribution
+          newCfg.distribution = { easy: 0, medium: 0, hard: 0 };
+          const buckets: DifficultyLevel[] = ["easy", "medium", "hard"];
+          for (let i = 0; i < newCount; i++) {
+            const bucket = buckets[i % 3];
+            newCfg.distribution[bucket]++;
+          }
+        }
+      }
+
+      return { ...prev, [type]: newCfg };
+    });
+  }
+
+  function updateDistribution(type: QuestionType, difficulty: DifficultyLevel, value: number) {
+    const clamped = Math.max(0, value);
+    setPlan((prev) => {
+      const newDist = { ...prev[type].distribution, [difficulty]: clamped };
+      const newCount = newDist.easy + newDist.medium + newDist.hard;
+      return {
+        ...prev,
+        [type]: {
+          ...prev[type],
+          distribution: newDist,
+          count: newCount,
+        },
+      };
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Suggest settings via AI (optional background call)
+  // ---------------------------------------------------------------------------
+
+  const handleSuggest = async () => {
+    setIsSuggesting(true);
+    try {
+      const res = await fetch(`/api/quizzes/${quizId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "start", quizId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.plan) {
+          setPlan(data.data.plan);
+          setCustomInstructions(data.data.plan.customInstructions ?? "");
+        }
+      }
+    } catch {
+      // Ignore suggestion errors
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Generate questions
+  // ---------------------------------------------------------------------------
+
+  function updateStep(stepId: string, status: GenerationStep["status"], errorMsg?: string) {
     setGenerationSteps((prev) =>
-      prev.map((step) =>
-        step.id === stepId ? { ...step, status, error } : step
-      )
+      prev.map((s) => (s.id === stepId ? { ...s, status, error: errorMsg } : s))
     );
     if (status === "in_progress") {
-      const stepIndex = generationSteps.findIndex((s) => s.id === stepId);
-      setCurrentStepIndex(stepIndex);
+      setGenerationSteps((prev) => {
+        const idx = prev.findIndex((s) => s.id === stepId);
+        setCurrentStepIndex(idx);
+        return prev;
+      });
     }
-  };
+  }
 
-  // Reset generation progress
-  const resetGenerationProgress = () => {
-    setGenerationSteps([
+  function buildSteps(totalBuckets: number) {
+    const steps: GenerationStep[] = [
       { id: "validate", label: "Validating configuration", status: "pending" },
-      { id: "generate", label: "Generating questions with AI", status: "pending" },
-      { id: "recheck", label: "AI quality review (blind recheck)", status: "pending" },
-      { id: "save", label: "Saving questions to database", status: "pending" },
-      { id: "complete", label: "Generation complete", status: "pending" },
-    ]);
-    setCurrentStepIndex(-1);
-    setGenerationError(null);
-  };
+      ...Array.from({ length: totalBuckets }, (_, i) => ({
+        id: `generate-${i}`,
+        label: `Generating questions (${i + 1}/${totalBuckets})`,
+        status: "pending" as const,
+      })),
+      { id: "recheck", label: "AI quality review", status: "pending" },
+      { id: "save", label: "Saving to database", status: "pending" },
+      { id: "complete", label: "Complete", status: "pending" },
+    ];
+    return steps;
+  }
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    if (isOpen && !chatState) {
-      startSession();
+  const handleGenerate = async () => {
+    const validationError = validatePlan(planWithInstructions);
+    if (validationError) {
+      setError(validationError);
+      return;
     }
-  }, [isOpen]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [chatState?.messages]);
-
-  const startSession = async () => {
-    setIsLoading(true);
     setError(null);
-
-    try {
-      console.log("[QBChatPanel] Starting session", { quizId });
-
-      const response = await fetch(`/api/quizzes/${quizId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "start",
-          quizId,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.error("[QBChatPanel] Session start failed:", {
-          quizId,
-          status: response.status,
-          error: data.error,
-          details: data.details,
-          fullResponse: data,
-          timestamp: new Date().toISOString(),
-        });
-        throw new Error(data.error || "Failed to start chat session");
-      }
-
-      const data = await response.json();
-
-      setChatState({
-        messages: [{ role: "assistant", content: data.data.response }],
-        plan: data.data.plan,
-        readyToGenerate: data.data.readyToGenerate,
-        phase: "configuring",
-      });
-
-      // Update config if plan exists
-      if (data.data.plan) {
-        setConfigCount(data.data.plan.count);
-        setConfigTypes(data.data.plan.questionTypes);
-        setConfigDifficulty(data.data.plan.difficulty);
-        setConfigInstructions(data.data.plan.customInstructions || "");
-      }
-
-      console.log("[QBChatPanel] Session started", {
-        quizId,
-        hasPlan: !!data.data.plan,
-      });
-    } catch (err) {
-      console.error("[QBChatPanel] Error starting session:", err);
-      setError(err instanceof Error ? err.message : "Failed to start chat");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = input.trim();
-    setInput("");
-    setError(null);
-
-    // Optimistically add user message
-    setChatState((prev) =>
-      prev
-        ? {
-            ...prev,
-            messages: [...prev.messages, { role: "user", content: userMessage }],
-          }
-        : null
-    );
-
+    setSuccessMessage(null);
     setIsLoading(true);
 
-    try {
-      console.log("[QBChatPanel] Sending message", { quizId, message: userMessage });
-
-      const response = await fetch(`/api/quizzes/${quizId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "message",
-          quizId,
-          message: userMessage,
-        }),
+    // Count active buckets
+    const buckets: { type: QuestionType; difficulty: DifficultyLevel }[] = [];
+    (["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).forEach((t) => {
+      if (!plan[t].enabled) return;
+      DIFFICULTIES.forEach((d) => {
+        if (plan[t].distribution[d] > 0) {
+          buckets.push({ type: t, difficulty: d });
+        }
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.error("[QBChatPanel] Message send failed:", {
-          quizId,
-          status: response.status,
-          error: data.error,
-          details: data.details,
-          fullResponse: data,
-          timestamp: new Date().toISOString(),
-        });
-        throw new Error(data.error || "Failed to send message");
-      }
-
-      const data = await response.json();
-
-      setChatState((prev) =>
-        prev
-          ? {
-              ...prev,
-              messages: [
-                ...prev.messages,
-                { role: "assistant", content: data.data.response },
-              ],
-              plan: data.data.plan || prev.plan,
-              readyToGenerate: data.data.readyToGenerate,
-            }
-          : null
-      );
-
-      // Update config if plan changed
-      if (data.data.plan) {
-        setConfigCount(data.data.plan.count);
-        setConfigTypes(data.data.plan.questionTypes);
-        setConfigDifficulty(data.data.plan.difficulty);
-        setConfigInstructions(data.data.plan.customInstructions || "");
-      }
-
-      console.log("[QBChatPanel] Message sent successfully", { quizId });
-    } catch (err) {
-      console.error("[QBChatPanel] Error sending message:", err);
-      setError(err instanceof Error ? err.message : "Failed to send message");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const updatePlan = async () => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log("[QBChatPanel] Updating plan", {
-        quizId,
-        count: configCount,
-        types: configTypes,
-        difficulty: configDifficulty,
-      });
-
-      const response = await fetch(`/api/quizzes/${quizId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "updatePlan",
-          quizId,
-          plan: {
-            count: configCount,
-            questionTypes: configTypes,
-            difficulty: configDifficulty,
-            customInstructions: configInstructions || undefined,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        console.error("[QBChatPanel] Plan update failed:", {
-          status: response.status,
-          error: data.error,
-          details: data.details,
-          timestamp: new Date().toISOString(),
-        });
-        throw new Error(data.error || "Failed to update plan");
-      }
-
-      const data = await response.json();
-
-      setChatState((prev) =>
-        prev
-          ? {
-              ...prev,
-              messages: [
-                ...prev.messages,
-                {
-                  role: "assistant",
-                  content: data.data.response,
-                },
-              ],
-              plan: data.data.plan,
-              readyToGenerate: data.data.readyToGenerate,
-            }
-          : null
-      );
-
-      console.log("[QBChatPanel] Plan updated successfully", { quizId });
-    } catch (err) {
-      console.error("[QBChatPanel] Error updating plan:", err);
-      setError(err instanceof Error ? err.message : "Failed to update plan");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const generateQuestions = async () => {
-    if (!chatState?.plan || isLoading) return;
-
-    setIsLoading(true);
-    setError(null);
-    setGenerationError(null);
-    setChatState((prev) => (prev ? { ...prev, phase: "generating" } : null));
-
-    // Reset and start progress tracking
-    resetGenerationProgress();
-    updateGenerationStep("validate", "in_progress");
-
-    console.log("[QBChatPanel] Starting question generation", {
-      quizId,
-      plan: chatState.plan,
-      timestamp: new Date().toISOString(),
     });
 
+    setGenerationSteps(buildSteps(buckets.length));
+    setPhase("generating");
+
     try {
-      // Step 1: Validate configuration
-      console.log("[QBChatPanel] Step 1: Validating configuration", {
-        quizId,
-        timestamp: new Date().toISOString(),
-      });
+      // Step 1: Save the plan
+      updateStep("validate", "in_progress");
 
-      if (!chatState.plan.count || chatState.plan.count < 1) {
-        throw new Error("Invalid question count");
-      }
-      if (!chatState.plan.questionTypes || chatState.plan.questionTypes.length === 0) {
-        throw new Error("At least one question type must be selected");
-      }
-
-      updateGenerationStep("validate", "completed");
-      updateGenerationStep("generate", "in_progress");
-
-      // Step 2: Generate questions
-      console.log("[QBChatPanel] Step 2: Calling generation API", {
-        quizId,
-        timestamp: new Date().toISOString(),
-      });
-
-      const response = await fetch(`/api/quizzes/${quizId}/chat`, {
+      const saveRes = await fetch(`/api/quizzes/${quizId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "generate",
-          quizId,
-        }),
+        body: JSON.stringify({ action: "savePlan", quizId, plan: planWithInstructions }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        const errorMessage = data.error || "Failed to generate questions";
-        const errorDetails = data.details || data.hint;
-        
-        console.error("[QBChatPanel] Generation API error:", {
-          quizId,
-          status: response.status,
-          error: errorMessage,
-          details: errorDetails,
-          fullResponse: data,
-          timestamp: new Date().toISOString(),
-        });
-        
-        // Show detailed error in development
-        const fullError = errorDetails 
-          ? `${errorMessage}\n\nDetails: ${errorDetails}` 
-          : errorMessage;
-        
-        throw new Error(fullError);
+      if (!saveRes.ok) {
+        const err = await saveRes.json();
+        throw new Error(err.error || "Failed to save settings");
       }
 
-      const data = await response.json();
+      updateStep("validate", "completed");
 
-      console.log("[QBChatPanel] Step 2: Questions generated", {
-        quizId,
-        questionCount: data.data.questions?.length ?? 0,
-        createdCount: data.data.createdQuestions,
-        timestamp: new Date().toISOString(),
+      // Step 2: Trigger generation
+      const genRes = await fetch(`/api/quizzes/${quizId}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "generate", quizId }),
       });
 
-      updateGenerationStep("generate", "completed");
-      updateGenerationStep("recheck", "completed"); // Recheck happens server-side
+      const genData = await genRes.json();
 
-      console.log("[QBChatPanel] Step 3: Saving to database", {
-        quizId,
-        timestamp: new Date().toISOString(),
-      });
+      if (!genRes.ok) {
+        throw new Error(genData.error || "Generation failed");
+      }
 
-      updateGenerationStep("save", "completed");
-      updateGenerationStep("complete", "completed");
+      // Mark all generation steps as done (the backend handles them)
+      for (let i = 0; i < buckets.length; i++) {
+        updateStep(`generate-${i}`, "completed");
+      }
+      updateStep("recheck", "completed");
+      updateStep("save", "completed");
+      updateStep("complete", "completed");
 
-      console.log("[QBChatPanel] Generation completed successfully", {
-        quizId,
-        createdCount: data.data.createdQuestions,
-        timestamp: new Date().toISOString(),
-      });
-
-      setChatState((prev) =>
-        prev
-          ? {
-              ...prev,
-              messages: [
-                ...prev.messages,
-                { role: "assistant", content: data.data.response },
-              ],
-              phase: "completed",
-              readyToGenerate: false,
-            }
-          : null
+      setSuccessMessage(
+        `${genData.data.createdQuestions ?? 0} question(s) generated successfully! Check the question bank.`
       );
-
-      // Notify parent to refresh
+      setPhase("completed");
       onQuestionsCreated?.();
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to generate questions";
-
-      console.error("[QBChatPanel] Generation failed:", {
-        quizId,
-        error: errorMessage,
-        timestamp: new Date().toISOString(),
-      });
+      const msg = err instanceof Error ? err.message : "An error occurred";
+      setError(msg);
+      setPhase("error");
 
       // Mark current step as error
-      const currentStep = generationSteps.find((s) => s.status === "in_progress");
-      if (currentStep) {
-        updateGenerationStep(currentStep.id, "error", errorMessage);
-      }
-
-      setGenerationError(errorMessage);
-      setError(errorMessage);
-      setChatState((prev) => (prev ? { ...prev, phase: "reviewing" } : null));
+      setGenerationSteps((prev) => {
+        const current = prev.find((s) => s.status === "in_progress");
+        if (current) {
+          return prev.map((s) =>
+            s.id === current.id ? { ...s, status: "error" as const, error: msg } : s
+          );
+        }
+        return prev;
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const endSession = async () => {
-    try {
-      console.log("[QBChatPanel] Ending session", { quizId });
+  // ---------------------------------------------------------------------------
+  // Close and reset
+  // ---------------------------------------------------------------------------
 
+  const handleClose = async () => {
+    try {
       await fetch(`/api/quizzes/${quizId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "end",
-          quizId,
-        }),
+        body: JSON.stringify({ action: "end", quizId }),
       });
-    } catch (err) {
-      console.error("[QBChatPanel] Error ending session:", err);
+    } catch {
+      // Ignore
     }
-
-    setChatState(null);
+    setPhase("idle");
     setError(null);
+    setSuccessMessage(null);
+    setSessionStarted(false);
     onClose();
   };
 
-  const toggleQuestionType = (type: string) => {
-    setConfigTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    );
-  };
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   if (!isOpen) return null;
 
+  const totalCount = getTotalCount(plan);
+
   return (
-    <div className="fixed right-0 top-0 z-50 h-full w-96 bg-background border-l shadow-lg flex flex-col">
+    <div className="fixed right-0 top-0 z-50 h-full w-[420px] bg-background border-l shadow-lg flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between p-4 border-b shrink-0">
         <div>
           <h2 className="font-semibold text-lg">Question Generator</h2>
           <p className="text-xs text-muted-foreground">
-            Configure and generate quiz questions
+            Configure per-type and per-difficulty settings
           </p>
         </div>
-        <Button variant="ghost" size="icon" onClick={endSession}>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M18 6 6 18" />
-            <path d="m6 6 12 12" />
+        <Button variant="ghost" size="icon" onClick={handleClose}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12"/>
           </svg>
         </Button>
       </div>
 
-      {/* Error display */}
-      {error && (
-        <div className="mx-4 mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Error banner */}
+        {error && (
+          <div className="mx-4 mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
 
-      {/* Messages */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-4">
-          {chatState?.messages.map((msg, i) => (
-            <div
-              key={i}
-              className={cn(
-                "flex",
-                msg.role === "user" ? "justify-end" : "justify-start"
-              )}
-            >
-              <div
-                className={cn(
-                  "max-w-[85%] rounded-lg px-4 py-2",
-                  msg.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                )}
-              >
-                <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-              </div>
+        {/* Success banner */}
+        {successMessage && (
+          <div className="mx-4 mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
+            <p className="text-sm text-green-700 dark:text-green-400">{successMessage}</p>
+          </div>
+        )}
+
+        {/* Generation progress */}
+        {phase === "generating" && (
+          <div className="mx-4 mt-4 p-3 bg-muted rounded-lg space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+              <p className="text-sm font-medium">Generating...</p>
             </div>
-          ))}
-
-          {isLoading && chatState?.phase !== "generating" && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg px-4 py-2">
-                <p className="text-sm text-muted-foreground">Thinking...</p>
-              </div>
-            </div>
-          )}
-
-          {chatState?.phase === "generating" && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg px-4 py-3 w-full">
-                {/* Step Progress Indicator */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                    <p className="text-sm font-medium">Generating Questions...</p>
-                  </div>
-
-                  {/* Progress Steps */}
-                  <div className="space-y-1.5">
-                    {generationSteps.map((step, index) => (
-                      <div key={step.id} className="flex items-center gap-2 text-xs">
-                        {step.status === "completed" ? (
-                          <>
-                            <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center">
-                              <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                            <span className="text-green-600 dark:text-green-400">{step.label}</span>
-                          </>
-                        ) : step.status === "in_progress" ? (
-                          <>
-                            <div className="h-4 w-4 rounded-full border-2 border-primary bg-primary/20 animate-pulse"></div>
-                            <span className="text-primary font-medium">{step.label}...</span>
-                          </>
-                        ) : step.status === "error" ? (
-                          <>
-                            <div className="h-4 w-4 rounded-full bg-red-500 flex items-center justify-center">
-                              <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </div>
-                            <span className="text-red-500">{step.label}</span>
-                            {step.error && (
-                              <span className="text-red-400 text-[10px] ml-1">({step.error})</span>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30"></div>
-                            <span className="text-muted-foreground/50">{step.label}</span>
-                          </>
-                        )}
+            <div className="space-y-1.5">
+              {generationSteps.map((step, idx) => (
+                <div key={step.id} className="flex items-center gap-2 text-xs">
+                  {step.status === "completed" ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                        <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Error Display */}
-                  {generationError && (
-                    <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-600 dark:text-red-400">
-                      <p className="font-medium">Error: {generationError}</p>
-                      <p className="text-muted-foreground mt-1">Check the browser console for more details.</p>
-                    </div>
+                      <span className="text-green-600 dark:text-green-400">{step.label}</span>
+                    </>
+                  ) : step.status === "in_progress" ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-primary bg-primary/20 animate-pulse shrink-0" />
+                      <span className="text-primary font-medium">{step.label}...</span>
+                    </>
+                  ) : step.status === "error" ? (
+                    <>
+                      <div className="h-4 w-4 rounded-full bg-red-500 flex items-center justify-center shrink-0">
+                        <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </div>
+                      <span className="text-red-500">{step.label}</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
+                      <span className="text-muted-foreground/50">{step.label}</span>
+                    </>
                   )}
-
-                  <p className="text-xs text-muted-foreground mt-2 pt-2 border-t">
-                    Open browser console (F12) to see detailed AI processing logs.
-                  </p>
                 </div>
-              </div>
+              ))}
             </div>
-          )}
+          </div>
+        )}
 
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Configuration Panel */}
-      {chatState && chatState.phase !== "completed" && (
-        <div className="border-t">
-          <div className="p-4 space-y-4">
-            <h3 className="font-medium text-sm">Generation Settings</h3>
-
-            {/* Count */}
-            <div className="space-y-2">
-              <Label htmlFor="count">Number of Questions</Label>
-              <Input
-                id="count"
-                type="number"
-                min={1}
-                max={100}
-                value={configCount}
-                onChange={(e) => setConfigCount(parseInt(e.target.value) || 10)}
-              />
-            </div>
-
-            {/* Question Types */}
-            <div className="space-y-2">
-              <Label>Question Types</Label>
-              <div className="flex flex-wrap gap-2">
-                {QUESTION_TYPES.map((type) => (
-                  <Button
-                    key={type.value}
-                    variant={configTypes.includes(type.value) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleQuestionType(type.value)}
-                  >
-                    {type.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Difficulty */}
-            <div className="space-y-2">
-              <Label htmlFor="difficulty">Difficulty</Label>
-              <Select value={configDifficulty} onValueChange={setConfigDifficulty}>
-                <SelectTrigger id="difficulty">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIFFICULTIES.map((d) => (
-                    <SelectItem key={d.value} value={d.value}>
-                      {d.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Custom Instructions */}
-            <div className="space-y-2">
-              <Label htmlFor="instructions">Custom Instructions (optional)</Label>
-              <Input
-                id="instructions"
-                placeholder="Focus on specific topics..."
-                value={configInstructions}
-                onChange={(e) => setConfigInstructions(e.target.value)}
-              />
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={updatePlan} disabled={isLoading}>
-              Update Settings
+        {/* Completed state */}
+        {phase === "completed" && (
+          <div className="mx-4 mt-4">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setPhase("idle");
+                setSuccessMessage(null);
+              }}
+            >
+              Generate More
             </Button>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Success State */}
-      {chatState?.phase === "completed" && (
-        <div className="mx-4 mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
-          <p className="text-sm text-green-700 dark:text-green-400">
-            Questions generated successfully! Check the question bank for the new questions.
-          </p>
-        </div>
-      )}
+        {/* Config form */}
+        {phase !== "generating" && phase !== "completed" && (
+          <div className="p-4 space-y-4">
+            {/* Summary */}
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Total questions:</span>
+              <span className="font-semibold">{totalCount}</span>
+            </div>
 
-      {/* Actions */}
-      {!chatState?.createdQuestions && chatState?.readyToGenerate && (
-        <div className="p-4 border-t space-y-2">
+            {/* Type configs */}
+            {(["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).map((type) => {
+              const meta = TYPE_META[type];
+              const cfg = plan[type];
+
+              return (
+                <Card key={type}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm">{meta.label}</CardTitle>
+                      <Button
+                        variant={cfg.enabled ? "default" : "outline"}
+                        size="sm"
+                        onClick={() =>
+                          updateType(type, {
+                            enabled: !cfg.enabled,
+                            count: cfg.enabled ? 0 : 5,
+                            distribution: cfg.enabled
+                              ? { easy: 0, medium: 0, hard: 0 }
+                              : { easy: 2, medium: 2, hard: 1 },
+                          })
+                        }
+                      >
+                        {cfg.enabled ? "Enabled" : "Disabled"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{meta.description}</p>
+                  </CardHeader>
+
+                  {cfg.enabled && (
+                    <CardContent className="space-y-3 pt-0">
+                      {/* Total count */}
+                      <div className="space-y-1">
+                        <Label htmlFor={`${type}-count`} className="text-xs">
+                          Total Count
+                        </Label>
+                        <Input
+                          id={`${type}-count`}
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={cfg.count}
+                          onChange={(e) =>
+                            updateType(type, { count: parseInt(e.target.value) || 0 })
+                          }
+                        />
+                      </div>
+
+                      {/* Difficulty distribution */}
+                      <div className="space-y-1">
+                        <Label className="text-xs">Difficulty Distribution</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {DIFFICULTIES.map((diff) => (
+                            <div key={diff} className="space-y-1">
+                              <Label className="text-xs capitalize text-muted-foreground">
+                                {diff}
+                              </Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={cfg.count}
+                                value={cfg.distribution[diff]}
+                                onChange={(e) =>
+                                  updateDistribution(type, diff, parseInt(e.target.value) || 0)
+                                }
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        {/* Distribution bar */}
+                        <div className="flex h-2 rounded-full overflow-hidden gap-0.5 mt-1">
+                          {cfg.count > 0 ? (
+                            <>
+                              <div
+                                className="bg-green-400 transition-all"
+                                style={{ width: `${(cfg.distribution.easy / cfg.count) * 100}%` }}
+                                title={`Easy: ${cfg.distribution.easy}`}
+                              />
+                              <div
+                                className="bg-yellow-400 transition-all"
+                                style={{ width: `${(cfg.distribution.medium / cfg.count) * 100}%` }}
+                                title={`Medium: ${cfg.distribution.medium}`}
+                              />
+                              <div
+                                className="bg-red-400 transition-all"
+                                style={{ width: `${(cfg.distribution.hard / cfg.count) * 100}%` }}
+                                title={`Hard: ${cfg.distribution.hard}`}
+                              />
+                            </>
+                          ) : (
+                            <div className="w-full bg-muted rounded-full" />
+                          )}
+                        </div>
+                        {cfg.distribution.easy + cfg.distribution.medium + cfg.distribution.hard !== cfg.count && (
+                          <p className="text-xs text-destructive">
+                            Sum must equal count ({cfg.distribution.easy + cfg.distribution.medium + cfg.distribution.hard}/{cfg.count})
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
+
+            {/* Custom instructions */}
+            <div className="space-y-1">
+              <Label htmlFor="custom-instructions" className="text-xs">
+                Custom Instructions (optional)
+              </Label>
+              <Textarea
+                id="custom-instructions"
+                placeholder="e.g. Focus on Chapter 3, emphasize formulas..."
+                rows={2}
+                value={customInstructions}
+                onChange={(e) => setCustomInstructions(e.target.value)}
+                className="text-sm"
+              />
+            </div>
+
+            {/* Suggest settings button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground"
+              onClick={handleSuggest}
+              disabled={isSuggesting}
+            >
+              {isSuggesting ? (
+                <>
+                  <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-2" />
+                  Suggesting...
+                </>
+              ) : (
+                "Suggest settings with AI"
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Footer actions */}
+      {phase !== "generating" && phase !== "completed" && (
+        <div className="p-4 border-t space-y-2 shrink-0">
           <Button
             className="w-full"
-            onClick={generateQuestions}
-            disabled={isLoading || configTypes.length === 0}
+            onClick={handleGenerate}
+            disabled={isLoading || totalCount === 0}
           >
-            {isLoading ? "Generating..." : `Generate ${configCount} Questions`}
+            {isLoading ? "Generating..." : `Generate ${totalCount} Question${totalCount !== 1 ? "s" : ""}`}
           </Button>
-        </div>
-      )}
-
-      {/* Input */}
-      {!chatState?.createdQuestions && (
-        <div className="p-4 border-t">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendMessage();
-            }}
-            className="flex gap-2"
-          >
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about question generation..."
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
-              Send
-            </Button>
-          </form>
         </div>
       )}
     </div>

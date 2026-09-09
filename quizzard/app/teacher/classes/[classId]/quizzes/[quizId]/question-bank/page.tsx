@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +60,10 @@ export default function QuestionBankPage({
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
@@ -299,6 +303,64 @@ export default function QuestionBankPage({
     }
   }
 
+  async function handleExport() {
+    try {
+      const res = await fetch(`/api/quizzes/${quizId}/question-bank/export`);
+      if (!res.ok) throw new Error("Export failed");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `question-bank-${quizId}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Success", description: "Question bank exported as CSV." });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to export",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function handleImportFile(e: React.FormEvent) {
+    e.preventDefault();
+    if (!importFile) return;
+
+    setIsImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const res = await fetch(`/api/quizzes/${quizId}/question-bank/upload`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Import failed");
+
+      toast({ title: "Success", description: data.message });
+      setIsImportDialogOpen(false);
+      setImportFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      fetchData();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to import",
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
   function resetForm() {
     setQuestionForm({
       type: "MCQ",
@@ -429,6 +491,95 @@ export default function QuestionBankPage({
             </svg>
             Generate with AI
           </Button>
+          <Button variant="outline" onClick={handleExport}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+          </Button>
+          <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Import CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <form onSubmit={handleImportFile}>
+                <DialogHeader>
+                  <DialogTitle>Import Questions</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV or Excel file to bulk-import questions. All imported questions
+                    will be set to <strong>Approved</strong>. The file must include columns:{" "}
+                    <code>type</code>, <code>prompt</code>, <code>options</code>{" "}
+                    (MCQ only), <code>correct_option_index</code> (MCQ only),{" "}
+                    <code>correct_answer</code> (short answer / formula),{" "}
+                    <code>variables</code> (calculation only), and optionally{" "}
+                    <code>explanation</code>.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    className="block w-full text-sm text-muted-foreground
+                      file:mr-4 file:py-2 file:px-4 file:rounded-md file:border
+                      file:border-input file:text-sm file:font-medium
+                      file:bg-background hover:file:bg-accent"
+                    onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                    required
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Supported formats: .csv, .xlsx, .xls
+                  </p>
+                </div>
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsImportDialogOpen(false);
+                      setImportFile(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isImporting || !importFile}>
+                    {isImporting ? "Importing..." : "Import"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isAddingQuestion} onOpenChange={setIsAddingQuestion}>
             <DialogTrigger asChild>
               <Button>

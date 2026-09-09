@@ -1,25 +1,22 @@
 /**
  * Question Bank Chat Service
  * Handles the conversational workflow for generating quiz questions
- * 
+ *
  * AI Processing Phases:
- * 1. Session Start - Initialize chat and get AI suggestions
- * 2. Message Processing - Handle user requests, update plan
- * 3. Generation - Call Gemini for question generation
- * 4. Recheck - Blind recheck each question for quality
- * 5. Database - Save questions to the database
+ * 1. Session Start - Return default config immediately (no blocking AI call)
+ * 2. Generation - Call Gemini per type/difficulty bucket, blind recheck each question, save to DB
  */
 
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
 import { callGeminiForJSON } from "./gemini-client";
 import {
-  QuestionGenerationConfig,
   QuestionProposal,
   GenerationPlan,
-  getInitialConfigPrompt,
-  getGenerationPrompt,
-  getAdjustPrompt,
+  TypeConfig,
+  QuestionType,
+  DifficultyLevel,
+  getTypeDifficultyPrompt,
 } from "./qb-chat-prompts";
 import { generateFullQuestionBank, blindRecheck, type GeneratedQuestion } from "./gemini-client";
 import { createQuestion } from "../services/question-bank.service";
@@ -29,8 +26,6 @@ import { logger } from "../utils/logger";
 const LOG_PREFIX = "[QB Chat Service]";
 const LOG_PHASE = {
   SESSION_START: "SESSION_START",
-  MESSAGE_PROCESS: "MESSAGE_PROCESS",
-  PLAN_UPDATE: "PLAN_UPDATE",
   GENERATION_START: "GENERATION_START",
   AI_CALL: "AI_CALL",
   RECHECK: "RECHECK",
@@ -39,7 +34,10 @@ const LOG_PHASE = {
   ERROR: "ERROR",
 } as const;
 
-// Chat state interface
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 interface QBChatSession {
   quizId: string;
   classId: string;
@@ -52,7 +50,10 @@ interface QBChatSession {
   updatedAt: Date;
 }
 
-// In-memory store for chat sessions (key: `${teacherId}-${quizId}`)
+// ---------------------------------------------------------------------------
+// In-memory session store
+// ---------------------------------------------------------------------------
+
 const chatSessions = new Map<string, QBChatSession>();
 
 function getSessionKey(teacherId: string, quizId: string): string {
@@ -103,30 +104,37 @@ function clearSession(teacherId: string, quizId: string): void {
   chatSessions.delete(key);
 }
 
-interface ChatResponse {
-  message: string;
-  suggestions?: {
-    count: number;
-    questionTypes: string[];
-    difficulty: string;
+// ---------------------------------------------------------------------------
+// Default generation plan factory
+// ---------------------------------------------------------------------------
+
+export function getDefaultGenerationPlan(): GenerationPlan {
+  return {
+    MCQ: { enabled: true, count: 5, distribution: { easy: 2, medium: 2, hard: 1 } },
+    SHORT_ANSWER: { enabled: true, count: 5, distribution: { easy: 2, medium: 2, hard: 1 } },
+    CALCULATION: { enabled: false, count: 0, distribution: { easy: 0, medium: 0, hard: 0 } },
   };
-  questions?: QuestionProposal[];
-  updatedPlan?: GenerationPlan | null;
-  readyToGenerate?: boolean;
-  awaitingConfig?: boolean;
 }
+
+export function getTotalQuestionCount(plan: GenerationPlan): number {
+  return plan.MCQ.count + plan.SHORT_ANSWER.count + plan.CALCULATION.count;
+}
+
+// ---------------------------------------------------------------------------
+// Result types
+// ---------------------------------------------------------------------------
 
 export interface QBChatResult {
   response: string;
   plan: GenerationPlan | null;
-  questions?: QuestionProposal[];
   readyToGenerate: boolean;
   createdQuestions?: number;
 }
 
-/**
- * Start a new chat session for question generation
- */
+// ---------------------------------------------------------------------------
+// Start a new chat session — NO blocking AI call
+// ---------------------------------------------------------------------------
+
 export async function startQBChatSession(
   teacherId: string,
   quizId: string
@@ -138,11 +146,6 @@ export async function startQBChatSession(
   });
 
   // Verify quiz exists and is accessible
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Fetching quiz details`, {
-    quizId,
-    timestamp: new Date().toISOString(),
-  });
-
   const quiz = await prisma.quiz.findUnique({
     where: { id: quizId },
     include: {
@@ -174,31 +177,7 @@ export async function startQBChatSession(
     throw new AuthorizationError("Cannot modify a published quiz");
   }
 
-  // Get existing questions to avoid duplication
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Checking existing questions`, {
-    quizId,
-    timestamp: new Date().toISOString(),
-  });
-
-  const existingQuestions = await prisma.questionBankItem.findMany({
-    where: { quizId },
-    select: { content: true },
-  });
-
-  const existingPrompts = existingQuestions
-    .map((q) => {
-      const content = q.content as Record<string, unknown>;
-      return String(content.prompt || content.promptTemplate || "");
-    })
-    .filter(Boolean);
-
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Found ${existingPrompts.length} existing questions`, {
-    quizId,
-    existingCount: existingPrompts.length,
-    timestamp: new Date().toISOString(),
-  });
-
-  // Create session
+  // Create or return existing session
   const session = getOrCreateSession(
     teacherId,
     quizId,
@@ -206,255 +185,61 @@ export async function startQBChatSession(
     quiz.lecture.class.id
   );
 
-  // If new session, generate initial greeting
-  if (session.messages.length === 0) {
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] New session - generating AI greeting`, {
-      quizId,
-      topic: quiz.instructions,
-      hasMaterial: !!quiz.lecture.material?.extractedText,
-      materialLength: quiz.lecture.material?.extractedText?.length ?? 0,
-      timestamp: new Date().toISOString(),
+  // If it's a brand new session, initialise with the default plan
+  if (!session.plan) {
+    session.plan = getDefaultGenerationPlan();
+    session.messages.push({
+      role: "assistant",
+      content:
+        "Welcome to the Question Generator! Configure how many questions you want for each type and difficulty, then click **Generate** when ready.",
     });
-
-    try {
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Building initial config prompt`, {
-        quizId,
-        timestamp: new Date().toISOString(),
-      });
-
-      const prompt = getInitialConfigPrompt(
-        quiz.instructions,
-        existingPrompts,
-        quiz.lecture.material?.extractedText
-      );
-
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Calling Gemini for initial config`, {
-        quizId,
-        promptLength: prompt.length,
-        timestamp: new Date().toISOString(),
-      });
-
-      const aiResponse = await callGeminiForJSON<ChatResponse>(prompt);
-
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Received AI response`, {
-        quizId,
-        hasMessage: !!aiResponse.message,
-        hasSuggestions: !!aiResponse.suggestions,
-        timestamp: new Date().toISOString(),
-      });
-
-      session.messages.push({
-        role: "assistant",
-        content: aiResponse.message,
-      });
-
-      if (aiResponse.suggestions) {
-        console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] AI provided suggestions`, {
-          quizId,
-          suggestedCount: aiResponse.suggestions.count,
-          suggestedTypes: aiResponse.suggestions.questionTypes,
-          suggestedDifficulty: aiResponse.suggestions.difficulty,
-          timestamp: new Date().toISOString(),
-        });
-
-        session.plan = {
-          count: aiResponse.suggestions.count,
-          questionTypes: aiResponse.suggestions.questionTypes,
-          difficulty: aiResponse.suggestions.difficulty as "easy" | "medium" | "hard",
-        };
-      }
-
-      session.phase = "configuring";
-      updateSession(session);
-
-      logger.info("qb.chat.session.started", {
-        teacherId,
-        quizId,
-        hasPlan: !!session.plan,
-      });
-
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Session started successfully`, {
-        quizId,
-        hasPlan: !!session.plan,
-        phase: session.phase,
-        timestamp: new Date().toISOString(),
-      });
-
-      return {
-        response: aiResponse.message,
-        plan: session.plan,
-        readyToGenerate: false,
-      };
-    } catch (error) {
-      console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Error generating initial prompt:`, error);
-      if (error instanceof Error) {
-        console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Stack:`, error.stack);
-      }
-      throw error;
-    }
+    updateSession(session);
   }
 
-  // Return existing session
-  const lastAssistantMessage = session.messages
-    .filter((m) => m.role === "assistant")
-    .pop();
-
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Returning existing session`, {
+  console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Session ready`, {
     quizId,
-    messageCount: session.messages.length,
+    hasPlan: !!session.plan,
     phase: session.phase,
     timestamp: new Date().toISOString(),
   });
 
   return {
-    response: lastAssistantMessage?.content || "Welcome back to question generation.",
+    response: session.messages[session.messages.length - 1]?.content || "",
     plan: session.plan,
-    readyToGenerate: session.phase === "reviewing" && session.plan !== null,
+    readyToGenerate: session.plan !== null,
   };
 }
 
-/**
- * Send a message in the chat session
- */
-export async function sendQBChatMessage(
+// ---------------------------------------------------------------------------
+// Save a plan from the UI
+// ---------------------------------------------------------------------------
+
+export function saveQBPlan(
   teacherId: string,
   quizId: string,
-  userMessage: string
-): Promise<QBChatResult> {
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.MESSAGE_PROCESS}] User message received`, {
-    quizId,
-    messageLength: userMessage.length,
-    messagePreview: userMessage.substring(0, 100),
-    timestamp: new Date().toISOString(),
-  });
-
+  plan: GenerationPlan
+): QBChatResult {
   const session = getSession(teacherId, quizId);
 
   if (!session) {
-    console.warn(`${LOG_PREFIX} [${LOG_PHASE.MESSAGE_PROCESS}] Session not found, starting new one`, {
-      quizId,
-      timestamp: new Date().toISOString(),
-    });
-    return startQBChatSession(teacherId, quizId);
-  }
-
-  // Add user message
-  session.messages.push({
-    role: "user",
-    content: userMessage,
-  });
-
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.MESSAGE_PROCESS}] Processing message`, {
-    quizId,
-    sessionPhase: session.phase,
-    hasPlan: !!session.plan,
-    messageCount: session.messages.length,
-    timestamp: new Date().toISOString(),
-  });
-
-  try {
-    // If we have a plan and user is ready to generate
-    if (session.plan && userMessage.toLowerCase().includes("generate")) {
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.MESSAGE_PROCESS}] User wants to generate questions`, {
-        quizId,
-        plan: session.plan,
-        timestamp: new Date().toISOString(),
-      });
-
-      return await generateQuestions(teacherId, quizId);
-    }
-
-    // Otherwise, adjust the plan
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Calling Gemini to adjust plan`, {
-      quizId,
-      promptPlan: session.plan,
-      timestamp: new Date().toISOString(),
-    });
-
-    const prompt = getAdjustPrompt(session.plan!, userMessage);
-    const aiResponse = await callGeminiForJSON<ChatResponse>(prompt);
-
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Received plan adjustment response`, {
-      quizId,
-      hasResponse: !!aiResponse.message,
-      hasUpdatedPlan: !!aiResponse.updatedPlan,
-      readyToGenerate: aiResponse.readyToGenerate,
-      timestamp: new Date().toISOString(),
-    });
-
-    session.messages.push({
-      role: "assistant",
-      content: aiResponse.message,
-    });
-
-    if (aiResponse.updatedPlan) {
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.PLAN_UPDATE}] Plan was updated`, {
-        quizId,
-        oldPlan: session.plan,
-        newPlan: aiResponse.updatedPlan,
-        timestamp: new Date().toISOString(),
-      });
-      session.plan = aiResponse.updatedPlan;
-    }
-
-    session.phase = "reviewing";
-    updateSession(session);
-
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.MESSAGE_PROCESS}] Message processed successfully`, {
-      quizId,
-      readyToGenerate: aiResponse.readyToGenerate,
-      timestamp: new Date().toISOString(),
-    });
-
-    return {
-      response: aiResponse.message,
-      plan: session.plan,
-      readyToGenerate: aiResponse.readyToGenerate ?? session.plan !== null,
-    };
-  } catch (error) {
-    console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Error processing message:`, error);
-    if (error instanceof Error) {
-      console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Stack:`, error.stack);
-    }
-    throw error;
-  }
-}
-
-/**
- * Update the generation plan directly
- */
-export async function updateQBPlan(
-  teacherId: string,
-  quizId: string,
-  newPlan: GenerationPlan
-): Promise<QBChatResult> {
-  console.log("[QB Chat] Updating generation plan", {
-    quizId,
-    newPlan,
-    timestamp: new Date().toISOString(),
-  });
-
-  const session = getSession(teacherId, quizId);
-
-  if (!session) {
-    console.error("[QB Chat] Session not found for plan update");
     throw new Error("Chat session not found. Please start a new session.");
   }
 
-  session.plan = newPlan;
+  session.plan = plan;
   session.phase = "reviewing";
   updateSession(session);
 
   return {
-    response: "Plan updated. Click 'Generate Questions' when ready.",
+    response: "Settings saved. Click **Generate Questions** when ready.",
     plan: session.plan,
     readyToGenerate: true,
   };
 }
 
-/**
- * Generate questions based on the current plan
- */
+// ---------------------------------------------------------------------------
+// Generate questions — loops over each type/difficulty bucket
+// ---------------------------------------------------------------------------
+
 export async function generateQuestions(
   teacherId: string,
   quizId: string
@@ -469,23 +254,12 @@ export async function generateQuestions(
 
   if (!session || !session.plan) {
     console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] No plan available for generation`);
-    throw new Error("No generation plan. Please configure first.");
+    throw new Error("No generation plan. Please configure settings first.");
   }
 
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_START}] Plan details`, {
-    quizId,
-    count: session.plan.count,
-    questionTypes: session.plan.questionTypes,
-    difficulty: session.plan.difficulty,
-    customInstructions: session.plan.customInstructions,
-    timestamp: new Date().toISOString(),
-  });
+  const plan = session.plan;
 
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_START}] Fetching quiz and material`, {
-    quizId,
-    timestamp: new Date().toISOString(),
-  });
-
+  // Fetch material for context
   const quiz = await prisma.quiz.findUnique({
     where: { id: quizId },
     include: {
@@ -498,254 +272,194 @@ export async function generateQuestions(
   });
 
   if (!quiz) {
-    console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Quiz not found during generation:`, quizId);
     throw new NotFoundError("Quiz");
   }
 
-  console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_START}] Material info`, {
-    quizId,
-    hasMaterial: !!quiz.lecture.material?.extractedText,
-    materialLength: quiz.lecture.material?.extractedText?.length ?? 0,
-    timestamp: new Date().toISOString(),
-  });
+  const materialText = quiz.lecture.material?.extractedText;
 
   session.phase = "generating";
   updateSession(session);
 
-  let questionsFromAI: QuestionProposal[] = [];
+  const enabledTypes: QuestionType[] = ["MCQ", "SHORT_ANSWER", "CALCULATION"].filter(
+    (t) => plan[t as keyof GenerationPlan]?.enabled
+  ) as QuestionType[];
 
-  try {
-    // Generate questions using Gemini
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Building generation prompt`, {
-      quizId,
-      topic: session.topic,
-      count: session.plan.count,
-      types: session.plan.questionTypes,
-      difficulty: session.plan.difficulty,
-      timestamp: new Date().toISOString(),
-    });
+  if (enabledTypes.length === 0) {
+    throw new Error("No question types are enabled. Please enable at least one type.");
+  }
 
-    const config: QuestionGenerationConfig = {
-      count: session.plan.count,
-      questionTypes: session.plan.questionTypes as QuestionGenerationConfig["questionTypes"],
-      difficulty: session.plan.difficulty as "easy" | "medium" | "hard",
-      customInstructions: session.plan.customInstructions,
-    };
+  const difficulties: DifficultyLevel[] = ["easy", "medium", "hard"];
 
-    const prompt = getGenerationPrompt(
-      session.topic,
-      config,
-      quiz.lecture.material?.extractedText
-    );
+  // Collect all questions from all type/difficulty buckets
+  let allQuestions: (QuestionProposal & { _bucket: string })[] = [];
+  const buckets: Array<{ type: QuestionType; difficulty: DifficultyLevel; count: number }> = [];
 
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Calling Gemini API for question generation`, {
-      quizId,
-      promptLength: prompt.length,
-      timestamp: new Date().toISOString(),
-    });
-
-    const aiResponse = await callGeminiForJSON<{
-      message: string;
-      questions: QuestionProposal[];
-    }>(prompt);
-
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Received response from Gemini`, {
-      quizId,
-      hasMessage: !!aiResponse.message,
-      questionCount: aiResponse.questions?.length ?? 0,
-      timestamp: new Date().toISOString(),
-    });
-
-    if (!aiResponse.questions || aiResponse.questions.length === 0) {
-      console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Gemini returned no questions`, {
-        quizId,
-        response: aiResponse,
-        timestamp: new Date().toISOString(),
-      });
-      throw new Error("No questions generated by AI");
-    }
-
-    questionsFromAI = aiResponse.questions;
-
-    // Create questions in database with recheck
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Starting to create questions in database`, {
-      quizId,
-      totalQuestions: questionsFromAI.length,
-      timestamp: new Date().toISOString(),
-    });
-
-    let createdCount = 0;
-    let recheckSuccessCount = 0;
-    let recheckFlaggedCount = 0;
-    let failedCount = 0;
-    const createdIds: string[] = [];
-
-    for (let i = 0; i < questionsFromAI.length; i++) {
-      const q = questionsFromAI[i];
-
-      console.log(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Processing question ${i + 1}/${questionsFromAI.length}`, {
-        quizId,
-        questionIndex: i,
-        questionType: q.type,
-        hasPrompt: !!q.prompt,
-        timestamp: new Date().toISOString(),
-      });
-
-      try {
-        // Validate question structure
-        if (!q.type || !q.prompt) {
-          console.warn(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Invalid question structure at index ${i}:`, {
-            quizId,
-            questionIndex: i,
-            question: q,
-            timestamp: new Date().toISOString(),
-          });
-          failedCount++;
-          continue;
-        }
-
-        // Blind recheck
-        console.log(`${LOG_PREFIX} [${LOG_PHASE.RECHECK}] Performing blind recheck on question ${i + 1}`, {
-          quizId,
-          questionIndex: i,
-          questionType: q.type,
-          timestamp: new Date().toISOString(),
-        });
-
-        const recheck = await blindRecheck(q as unknown as GeneratedQuestion);
-
-        console.log(`${LOG_PREFIX} [${LOG_PHASE.RECHECK}] Recheck complete for question ${i + 1}`, {
-          quizId,
-          questionIndex: i,
-          flagged: recheck.flagged,
-          reason: recheck.reason,
-          timestamp: new Date().toISOString(),
-        });
-
-        if (recheck.flagged) {
-          recheckFlaggedCount++;
-        } else {
-          recheckSuccessCount++;
-        }
-
-        const status: QuestionStatus = recheck.flagged
-          ? QuestionStatus.FLAGGED_FOR_REVIEW
-          : QuestionStatus.DRAFT;
-
-        console.log(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Saving question ${i + 1} to database`, {
-          quizId,
-          questionIndex: i,
-          status,
-          timestamp: new Date().toISOString(),
-        });
-
-        // Create question in DB
-        const dbQuestion = await createQuestion(quizId, teacherId, {
-          type: q.type,
-          content: q as unknown as Record<string, unknown>,
-          status,
-          generationInstruction: session.plan.customInstructions ?? null,
-        });
-
-        createdIds.push(dbQuestion.id);
-        createdCount++;
-
-        console.log(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Question ${i + 1} saved successfully`, {
-          quizId,
-          questionId: dbQuestion.id,
-          status,
-          timestamp: new Date().toISOString(),
-        });
-      } catch (error) {
-        failedCount++;
-        console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Error creating question ${i + 1}:`, {
-          quizId,
-          questionIndex: i,
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          timestamp: new Date().toISOString(),
-        });
-        // Continue with other questions
+  // Build the list of buckets we need to generate
+  for (const type of enabledTypes) {
+    const typeConfig = plan[type as keyof GenerationPlan] as TypeConfig;
+    for (const diff of difficulties) {
+      const count = typeConfig.distribution[diff];
+      if (count > 0) {
+        buckets.push({ type, difficulty: diff, count });
       }
     }
-
-    // Add assistant message
-    session.messages.push({
-      role: "assistant",
-      content: aiResponse.message,
-    });
-
-    session.phase = "completed";
-    updateSession(session);
-
-    console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_COMPLETE}] Question generation completed`, {
-      quizId,
-      requested: questionsFromAI.length,
-      created: createdCount,
-      failed: failedCount,
-      recheckFlagged: recheckFlaggedCount,
-      recheckPassed: recheckSuccessCount,
-      timestamp: new Date().toISOString(),
-    });
-
-    logger.info("qb.chat.generation.completed", {
-      teacherId,
-      quizId,
-      requested: questionsFromAI.length,
-      created: createdCount,
-      failed: failedCount,
-      flagged: recheckFlaggedCount,
-    });
-
-    return {
-      response: aiResponse.message,
-      plan: session.plan,
-      questions: questionsFromAI,
-      readyToGenerate: false,
-      createdQuestions: createdCount,
-    };
-  } catch (error) {
-    console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Error during question generation:`, {
-      quizId,
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString(),
-    });
-    session.phase = "reviewing";
-    updateSession(session);
-    throw error;
   }
-}
 
-/**
- * End a chat session
- */
-export function endQBChatSession(teacherId: string, quizId: string): void {
-  console.log("[QB Chat] Session ended", {
-    teacherId,
+  console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_START}] Buckets to generate`, {
+    quizId,
+    buckets,
+    timestamp: new Date().toISOString(),
+  });
+
+  // Generate each bucket in sequence
+  for (let i = 0; i < buckets.length; i++) {
+    const { type, difficulty, count } = buckets[i];
+
+    console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Generating bucket ${i + 1}/${buckets.length}: ${count} ${difficulty} ${type}`, {
+      quizId,
+      type,
+      difficulty,
+      count,
+      timestamp: new Date().toISOString(),
+    });
+
+    try {
+      const prompt = getTypeDifficultyPrompt(
+        session.topic,
+        type,
+        difficulty,
+        count,
+        plan.customInstructions,
+        materialText
+      );
+
+      const response = await callGeminiForJSON<{ questions: QuestionProposal[] }>(prompt);
+
+      const questions = (response.questions || []).map((q) => ({
+        ...q,
+        _bucket: `${type}:${difficulty}`,
+      }));
+
+      console.log(`${LOG_PREFIX} [${LOG_PHASE.AI_CALL}] Bucket ${i + 1} done, got ${questions.length} questions`, {
+        quizId,
+        type,
+        difficulty,
+        received: questions.length,
+        timestamp: new Date().toISOString(),
+      });
+
+      allQuestions = allQuestions.concat(questions);
+    } catch (error) {
+      console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Bucket ${i + 1} failed:`, {
+        quizId,
+        type,
+        difficulty,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      });
+      // Continue with other buckets
+    }
+  }
+
+  if (allQuestions.length === 0) {
+    throw new Error("No questions could be generated. Please try again.");
+  }
+
+  console.log(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Saving ${allQuestions.length} questions to database`, {
     quizId,
     timestamp: new Date().toISOString(),
   });
 
+  let createdCount = 0;
+  let failedCount = 0;
+
+  // Save each question with blind recheck
+  for (let i = 0; i < allQuestions.length; i++) {
+    const q = allQuestions[i];
+
+    try {
+      // Validate
+      if (!q.type || !q.prompt) {
+        failedCount++;
+        continue;
+      }
+
+      // Blind recheck
+      const recheck = await blindRecheck(q as unknown as GeneratedQuestion);
+
+      const status: QuestionStatus = recheck.flagged
+        ? QuestionStatus.FLAGGED_FOR_REVIEW
+        : QuestionStatus.DRAFT;
+
+      await createQuestion(quizId, teacherId, {
+        type: q.type,
+        content: q as unknown as Record<string, unknown>,
+        status,
+        generationInstruction: plan.customInstructions ?? null,
+      });
+
+      createdCount++;
+    } catch (error) {
+      failedCount++;
+      console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Failed to save question ${i + 1}:`, {
+        quizId,
+        questionIndex: i,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  session.phase = "completed";
+  updateSession(session);
+
+  const summary = `Generated ${createdCount} question(s). ${failedCount > 0 ? `${failedCount} failed.` : ""}`;
+
+  console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_COMPLETE}] Done`, {
+    quizId,
+    created: createdCount,
+    failed: failedCount,
+    timestamp: new Date().toISOString(),
+  });
+
+  logger.info("qb.chat.generation.completed", {
+    teacherId,
+    quizId,
+    created: createdCount,
+    failed: failedCount,
+  });
+
+  return {
+    response: summary,
+    plan,
+    readyToGenerate: false,
+    createdQuestions: createdCount,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// End session
+// ---------------------------------------------------------------------------
+
+export function endQBChatSession(teacherId: string, quizId: string): void {
+  console.log("[QB Chat] Session ended", { teacherId, quizId });
   clearSession(teacherId, quizId);
 }
 
-/**
- * Get current session state
- */
+// ---------------------------------------------------------------------------
+// Get session state
+// ---------------------------------------------------------------------------
+
 export function getQBChatSessionState(
   teacherId: string,
   quizId: string
 ): QBChatResult | null {
   const session = getSession(teacherId, quizId);
-
-  if (!session) {
-    return null;
-  }
+  if (!session) return null;
 
   return {
     response: "",
     plan: session.plan,
-    readyToGenerate: session.phase === "reviewing" && session.plan !== null,
+    readyToGenerate: session.phase !== "generating" && session.plan !== null,
   };
 }
