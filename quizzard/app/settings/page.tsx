@@ -1,0 +1,307 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "TEACHER" | "STUDENT";
+  createdAt: string;
+}
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+
+  // Profile form state
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Password form state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
+
+  useEffect(() => {
+    fetchUser();
+  }, []);
+
+  async function fetchUser() {
+    try {
+      const res = await fetch("/api/auth/me");
+      const data = await res.json();
+      if (data.data) {
+        setUser(data.data);
+        setName(data.data.name);
+        setEmail(data.data.email);
+      }
+    } catch {
+      toast({
+        title: "Lỗi",
+        description: "Không thể tải thông tin người dùng",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSaveProfile(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSavingProfile(true);
+
+    try {
+      const res = await fetch("/api/users/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to update profile");
+      }
+
+      setUser(data.data);
+      toast({
+        title: "Thành công",
+        description: "Hồ sơ đã được cập nhật",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể cập nhật hồ sơ",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Lỗi",
+        description: "Mật khẩu mới không khớp",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSavingPassword(true);
+
+    try {
+      const res = await fetch("/api/users/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to change password");
+      }
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      toast({
+        title: "Thành công",
+        description: "Mật khẩu đã được thay đổi",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể thay đổi mật khẩu",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingPassword(false);
+    }
+  }
+
+  function formatDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("vi-VN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-2xl mx-auto">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <Skeleton className="h-96 w-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold mb-1">Cài đặt Tài khoản</h1>
+      <p className="text-muted-foreground mb-6">Quản lý thông tin và bảo mật tài khoản</p>
+
+      <Tabs defaultValue="profile" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="profile">Hồ sơ</TabsTrigger>
+          <TabsTrigger value="security">Bảo mật</TabsTrigger>
+          <TabsTrigger value="account">Tài khoản</TabsTrigger>
+        </TabsList>
+
+        {/* Profile Tab */}
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle>Thông tin hồ sơ</CardTitle>
+              <CardDescription>Cập nhật tên và email của bạn</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSaveProfile} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Tên</Label>
+                  <Input
+                    id="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nhập tên của bạn"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Nhập email của bạn"
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={isSavingProfile}>
+                  {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle>Đổi mật khẩu</CardTitle>
+              <CardDescription>
+                Cập nhật mật khẩu để bảo vệ tài khoản của bạn
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu hiện tại"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Mật khẩu mới</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Nhập mật khẩu mới"
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Mật khẩu phải có ít nhất 6 ký tự
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Nhập lại mật khẩu mới"
+                    required
+                  />
+                </div>
+                <Button type="submit" disabled={isSavingPassword}>
+                  {isSavingPassword ? "Đang lưu..." : "Đổi mật khẩu"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Account Tab */}
+        <TabsContent value="account">
+          <Card>
+            <CardHeader>
+              <CardTitle>Thông tin tài khoản</CardTitle>
+              <CardDescription>
+                Thông tin tài khoản của bạn
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between py-3 border-b">
+                <div>
+                  <p className="text-sm font-medium">Vai trò</p>
+                  <p className="text-sm text-muted-foreground">Loại tài khoản của bạn</p>
+                </div>
+                <Badge variant="secondary">
+                  {user?.role === "TEACHER" ? "Giáo viên" : "Sinh viên"}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b">
+                <div>
+                  <p className="text-sm font-medium">Email</p>
+                  <p className="text-sm text-muted-foreground">Địa chỉ email của bạn</p>
+                </div>
+                <p className="text-sm">{user?.email}</p>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium">Ngày tạo</p>
+                  <p className="text-sm text-muted-foreground">Ngày bạn đăng ký tài khoản</p>
+                </div>
+                <p className="text-sm">
+                  {user?.createdAt ? formatDate(user.createdAt) : "—"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

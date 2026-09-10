@@ -73,3 +73,14 @@ export async function validateCredentials(
     role: user.role,
   };
 }
+
+export async function updatePassword(
+  userId: string,
+  newPassword: string
+): Promise<void> {
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
+  });
+}

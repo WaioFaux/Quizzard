@@ -31,6 +31,16 @@ export const LoginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const UpdateProfileSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100),
+  email: z.string().email("Invalid email address"),
+});
+
+export const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "Password must be at least 6 characters").max(100),
+});
+
 // ---------- Classes ----------
 
 export const CreateClassSchema = z.object({
@@ -232,6 +242,8 @@ export const PaginationSchema = z.object({
 
 export type SignupInput = z.infer<typeof SignupSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
+export type UpdateProfileInput = z.infer<typeof UpdateProfileSchema>;
+export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
 export type CreateClassInput = z.infer<typeof CreateClassSchema>;
 export type UpdateClassInput = z.infer<typeof UpdateClassSchema>;
 export type JoinClassInput = z.infer<typeof JoinClassSchema>;
