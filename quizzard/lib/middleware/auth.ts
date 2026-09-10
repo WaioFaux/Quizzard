@@ -6,6 +6,7 @@ import { Role } from "@prisma/client";
 export interface SessionData {
   userId: string;
   role: Role;
+  name: string;
 }
 
 export interface SessionOptions {

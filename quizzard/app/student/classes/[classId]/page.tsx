@@ -193,6 +193,47 @@ export default function StudentClassOverviewPage({
             </p>
           )}
         </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}/full-leaderboard`)}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2"
+            >
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </svg>
+            Class Leaderboard
+          </Button>
+          <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}/leaderboard`)}>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="mr-2"
+            >
+              <path d="M8.21 13.89L7 23l5-3 5 3-1.21-9.12" />
+              <path d="M12 2v8" />
+              <path d="M12 18v4" />
+              <path d="M4.04 11.071a3 3 0 0 1 0-1.142" />
+              <path d="M19.96 11.071a3 3 0 0 0 0-1.142" />
+              <path d="M12 10v4" />
+            </svg>
+            Per Quiz
+          </Button>
+        </div>
         <Button variant="outline" onClick={() => router.push("/student/classes/join")}>
           Leave Class
         </Button>

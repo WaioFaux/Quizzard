@@ -44,13 +44,15 @@ export function StudentSidebar({ studentName }: StudentSidebarProps) {
           Lớp đã tham gia
         </a>
         <a
-          href="/student/leaderboard"
+          href="/student/progress"
           className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 transition"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            <line x1="18" y1="20" x2="18" y2="10" />
+            <line x1="12" y1="20" x2="12" y2="4" />
+            <line x1="6" y1="20" x2="6" y2="14" />
           </svg>
-          Bảng xếp hạng
+          Tiến độ học tập
         </a>
       </nav>
 

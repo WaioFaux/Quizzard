@@ -23,8 +23,9 @@ export function handleApiError(error: unknown) {
   }
 
   // Return generic message for security. Full stack trace is already logged server-side.
-  return Response.json(
-    { error: "An unexpected error occurred" },
-    { status: 500 }
-  );
+  const devError =
+    process.env.NODE_ENV === "development" && error instanceof Error
+      ? error.message
+      : "An unexpected error occurred";
+  return Response.json({ error: devError }, { status: 500 });
 }

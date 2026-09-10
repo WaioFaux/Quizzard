@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     const session = await getSession();
     session.userId = user.id;
     session.role = user.role;
+    session.name = user.name;
     await session.save();
 
     logger.info("auth.signup", { userId: user.id, role: user.role });

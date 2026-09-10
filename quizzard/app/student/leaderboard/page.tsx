@@ -193,7 +193,7 @@ export default function StudentLeaderboardPage() {
                   {leaderboard[1].studentName}
                 </p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[1].score)}`}>
-                  {Math.round(leaderboard[1].score)}%
+                  {leaderboard[1].score} pts
                 </p>
                 <div className="w-20 h-16 bg-gray-300 rounded-t-lg flex items-center justify-center text-2xl">
                   🥈
@@ -209,7 +209,7 @@ export default function StudentLeaderboardPage() {
                   {leaderboard[0].studentName}
                 </p>
                 <p className={`text-2xl font-bold ${getScoreColor(leaderboard[0].score)}`}>
-                  {Math.round(leaderboard[0].score)}%
+                  {leaderboard[0].score} pts
                 </p>
                 <div className="w-24 h-20 bg-amber-400 rounded-t-lg flex items-center justify-center text-3xl">
                   🥇
@@ -225,7 +225,7 @@ export default function StudentLeaderboardPage() {
                   {leaderboard[2].studentName}
                 </p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[2].score)}`}>
-                  {Math.round(leaderboard[2].score)}%
+                  {leaderboard[2].score} pts
                 </p>
                 <div className="w-20 h-12 bg-amber-600 rounded-t-lg flex items-center justify-center text-2xl">
                   🥉
@@ -290,7 +290,7 @@ export default function StudentLeaderboardPage() {
                       </div>
                       <div className="text-right">
                         <p className={`text-xl font-bold ${getScoreColor(entry.score)}`}>
-                          {Math.round(entry.score)}%
+                          {entry.score} pts
                         </p>
                       </div>
                     </div>
