@@ -39,6 +39,7 @@ export async function PATCH(req: NextRequest) {
         name: true,
         email: true,
         role: true,
+        avatarUrl: true,
         createdAt: true,
       },
     });
@@ -54,6 +55,7 @@ export async function PATCH(req: NextRequest) {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatarUrl: user.avatarUrl,
         createdAt: user.createdAt.toISOString(),
       },
     });

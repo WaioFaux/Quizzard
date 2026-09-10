@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 interface StudentSidebarProps {
   studentName?: string;
+  avatarUrl?: string | null;
 }
 
-export function StudentSidebar({ studentName }: StudentSidebarProps) {
+export function StudentSidebar({ studentName, avatarUrl }: StudentSidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
@@ -22,6 +23,8 @@ export function StudentSidebar({ studentName }: StudentSidebarProps) {
       setIsLoggingOut(false);
     }
   }
+
+  const initial = studentName?.charAt(0).toUpperCase() || "S";
 
   return (
     <aside className="w-60 shrink-0 border-r bg-slate-900 flex flex-col h-screen">
@@ -68,9 +71,17 @@ export function StudentSidebar({ studentName }: StudentSidebarProps) {
 
       <div className="p-4 border-t border-slate-700">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
-            {studentName?.charAt(0).toUpperCase() || "S"}
-          </div>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={studentName || "Avatar"}
+              className="w-9 h-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+              {initial}
+            </div>
+          )}
           <div className="leading-tight">
             <p className="text-sm font-medium text-slate-200">{studentName || "Student"}</p>
             <p className="text-xs text-slate-500">Sinh viên</p>

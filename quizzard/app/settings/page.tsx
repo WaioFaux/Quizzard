@@ -8,14 +8,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AvatarUpload } from "@/components/settings/avatar-upload";
 
 interface User {
   id: string;
   name: string;
   email: string;
   role: "TEACHER" | "STUDENT";
+  avatarUrl: string | null;
   createdAt: string;
 }
 
@@ -39,6 +42,10 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchUser();
   }, []);
+
+  function handleAvatarUpdate(avatarUrl: string | null) {
+    setUser((prev) => (prev ? { ...prev, avatarUrl } : null));
+  }
 
   async function fetchUser() {
     try {
@@ -175,9 +182,21 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Thông tin hồ sơ</CardTitle>
-              <CardDescription>Cập nhật tên và email của bạn</CardDescription>
+              <CardDescription>Cập nhật ảnh đại diện, tên và email của bạn</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              {/* Avatar Upload */}
+              <div>
+                <Label className="mb-2 block">Ảnh đại diện</Label>
+                <AvatarUpload
+                  currentAvatarUrl={user?.avatarUrl}
+                  userName={user?.name}
+                  onAvatarUpdate={handleAvatarUpdate}
+                />
+              </div>
+
+              <Separator />
+
               <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Tên</Label>

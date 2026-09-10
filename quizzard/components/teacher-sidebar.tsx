@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 interface TeacherSidebarProps {
   teacherName?: string;
+  avatarUrl?: string | null;
 }
 
-export function TeacherSidebar({ teacherName }: TeacherSidebarProps) {
+export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
 
@@ -22,6 +23,8 @@ export function TeacherSidebar({ teacherName }: TeacherSidebarProps) {
       setIsLoggingOut(false);
     }
   }
+
+  const initial = teacherName?.charAt(0).toUpperCase() || "T";
 
   return (
     <aside className="w-64 shrink-0 border-r bg-slate-900 flex flex-col h-screen">
@@ -68,9 +71,17 @@ export function TeacherSidebar({ teacherName }: TeacherSidebarProps) {
 
       <div className="p-4 border-t border-slate-700">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
-            {teacherName?.charAt(0).toUpperCase() || "T"}
-          </div>
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={teacherName || "Avatar"}
+              className="w-9 h-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+              {initial}
+            </div>
+          )}
           <div className="leading-tight">
             <p className="text-sm font-medium text-slate-200">{teacherName || "Teacher"}</p>
             <p className="text-xs text-slate-500">Teacher</p>
