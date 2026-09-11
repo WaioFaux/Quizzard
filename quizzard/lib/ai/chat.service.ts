@@ -1,11 +1,13 @@
 /**
  * AI Chat Service
  * Handles the two-phase conversation flow for lecture generation
+ * 
+ * Uses OpenRouter for AI responses with free models
  */
 
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
-import { callGeminiForJSON } from "./gemini-client";
+import { callOpenRouterForJSON, isOpenRouterConfigured } from "./openrouter-client";
 import {
   ChatMessage,
   LectureProposal,
@@ -145,7 +147,7 @@ export async function startChatSession(
   if (session.messages.length === 0) {
     try {
       const prompt = getInitialAnalysisPrompt(material.extractedText);
-      const aiResponse = await callGeminiForJSON<ChatResponse>(prompt);
+      const aiResponse = await callOpenRouterForJSON<ChatResponse>(prompt);
 
       session.messages.push({
         role: "assistant",
@@ -217,7 +219,7 @@ export async function sendChatMessage(
 
   try {
     const prompt = getFollowUpPrompt(session.proposals, userMessage);
-    const aiResponse = await callGeminiForJSON<ChatResponse>(prompt);
+    const aiResponse = await callOpenRouterForJSON<ChatResponse>(prompt);
 
     session.messages.push({
       role: "assistant",
@@ -283,7 +285,7 @@ export async function confirmLecturePlan(
 
   try {
     const prompt = getConfirmPrompt(session.proposals);
-    const aiResponse = await callGeminiForJSON<{
+    const aiResponse = await callOpenRouterForJSON<{
       message: string;
       lectures: LectureFormat[];
     }>(prompt);

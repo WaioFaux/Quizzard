@@ -8,6 +8,7 @@ import {
   type RecheckResult,
   type LectureProposal,
 } from "./prompts";
+import { callOpenRouterForJSON, isOpenRouterConfigured } from "./openrouter-client";
 
 export interface MCQContent {
   type: "MCQ";
@@ -355,7 +356,8 @@ export async function generateQuestions(
   const errors: string[] = [];
   const questions: GeneratedQuestion[] = [];
 
-  if (!isGeminiConfigured()) {
+  // Try OpenRouter first, then fallback to mock
+  if (!isOpenRouterConfigured()) {
     return generateMockQuestions(count, questionTypes);
   }
 
@@ -371,7 +373,7 @@ export async function generateQuestions(
       materialText,
     });
 
-    const rawQuestions = await callGeminiForJSON<GeneratedPrompt[]>(prompt);
+    const rawQuestions = await callOpenRouterForJSON<GeneratedPrompt[]>(prompt);
 
     if (!Array.isArray(rawQuestions)) {
       throw new Error("Gemini returned non-array response");
@@ -418,7 +420,7 @@ export async function generateQuestions(
   }
 }
 
-function generateMockQuestions(count: number, preferredTypes?: QuestionType[]): GenerationResult {
+export function generateMockQuestions(count: number, preferredTypes?: QuestionType[]): GenerationResult {
   const questionTypes = getQuestionTypeMix(count, preferredTypes);
   const questions: GeneratedQuestion[] = questionTypes.map((type) => {
     let question: GeneratedQuestion;
@@ -530,8 +532,9 @@ export async function blindRecheck(
     timestamp: new Date().toISOString(),
   });
 
-  if (!isGeminiConfigured()) {
-    console.warn(`${LOG_PREFIX} [RECHECK_SKIP] Gemini not configured, using random fallback`, {
+  // Try OpenRouter first, then fallback to mock
+  if (!isOpenRouterConfigured()) {
+    console.warn(`${LOG_PREFIX} [RECHECK_SKIP] OpenRouter not configured, using random fallback`, {
       timestamp: new Date().toISOString(),
     });
     if (Math.random() < 0.05) {
@@ -547,12 +550,12 @@ export async function blindRecheck(
   }
 
   try {
-    console.log(`${LOG_PREFIX} [RECHECK_API] Calling Gemini for recheck`, {
+    console.log(`${LOG_PREFIX} [RECHECK_API] Calling OpenRouter for recheck`, {
       timestamp: new Date().toISOString(),
     });
 
     const prompt = recheckQuestionPrompt(question);
-    const result = await callGeminiForJSON<RecheckResult>(prompt);
+    const result = await callOpenRouterForJSON<RecheckResult>(prompt);
 
     console.log(`${LOG_PREFIX} [RECHECK_COMPLETE] Recheck finished`, {
       flagged: result.flagged,
@@ -576,8 +579,9 @@ export async function blindRecheck(
 export async function proposeLectures(
   materialText: string
 ): Promise<Array<{ title: string; startPage: number; endPage: number }>> {
-  if (!isGeminiConfigured()) {
-    console.warn(`${LOG_PREFIX} Gemini not configured, using mock lectures`);
+  // Try OpenRouter first, then fallback to mock
+  if (!isOpenRouterConfigured()) {
+    console.warn(`${LOG_PREFIX} OpenRouter not configured, using mock lectures`);
     return generateMockLectures();
   }
 
@@ -587,7 +591,7 @@ export async function proposeLectures(
       timestamp: new Date().toISOString(),
     });
     const prompt = proposeLecturesPrompt(materialText);
-    const result = await callGeminiForJSON<Array<{ title: string; startPage: number; endPage: number }>>(prompt);
+    const result = await callOpenRouterForJSON<Array<{ title: string; startPage: number; endPage: number }>>(prompt);
     console.log(`${LOG_PREFIX} Lecture proposals generated`, {
       count: result.length,
       timestamp: new Date().toISOString(),

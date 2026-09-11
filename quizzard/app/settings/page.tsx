@@ -12,6 +12,14 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AVAILABLE_FREE_MODELS, DEFAULT_MODEL } from "@/lib/ai/available-models";
 
 interface User {
   id: string;
@@ -20,7 +28,10 @@ interface User {
   role: "TEACHER" | "STUDENT";
   avatarUrl: string | null;
   createdAt: string;
+  preferredModel?: string | null;
 }
+
+const STORAGE_KEY = "quizzard-preferred-model";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -39,8 +50,20 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
+  // AI Settings state
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [isSavingModel, setIsSavingModel] = useState(false);
+
   useEffect(() => {
     fetchUser();
+    // Load saved model preference from localStorage
+    const savedModel = localStorage.getItem(STORAGE_KEY);
+    if (savedModel) {
+      setSelectedModel(savedModel);
+    } else {
+      // Use default model from config
+      setSelectedModel(DEFAULT_MODEL);
+    }
   }, []);
 
   function handleAvatarUpdate(avatarUrl: string | null) {
@@ -148,6 +171,41 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleSaveModel() {
+    setIsSavingModel(true);
+
+    try {
+      // Save to localStorage for now
+      localStorage.setItem(STORAGE_KEY, selectedModel);
+
+      toast({
+        title: "Thành công",
+        description: "Mô hình AI đã được lưu",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể lưu mô hình AI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingModel(false);
+    }
+  }
+
+  function getModelDisplayName(modelId: string): string {
+    const model = AVAILABLE_FREE_MODELS.find((m) => m.id === modelId);
+    return model?.name || modelId;
+  }
+
+  function formatContextLength(length: number): string {
+    if (length >= 1000000) {
+      return `${(length / 1000000).toFixed(0)}M tokens`;
+    }
+    return `${(length / 1024).toFixed(0)}K tokens`;
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("vi-VN", {
       day: "numeric",
@@ -173,6 +231,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Hồ sơ</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="security">Bảo mật</TabsTrigger>
           <TabsTrigger value="account">Tài khoản</TabsTrigger>
         </TabsList>
@@ -223,6 +282,68 @@ export default function SettingsPage() {
                   {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI Tab */}
+        <TabsContent value="ai">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cài đặt AI</CardTitle>
+              <CardDescription>
+                Chọn mô hình AI miễn phí để sử dụng cho việc tạo câu hỏi và bài giảng
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="model">Mô hình AI</Label>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger id="model">
+                    <SelectValue placeholder="Chọn mô hình AI" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AVAILABLE_FREE_MODELS.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{model.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatContextLength(model.contextLength)} context
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Model Description */}
+              {selectedModel && (
+                <div className="rounded-lg border p-4 bg-muted/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-medium">{getModelDisplayName(selectedModel)}</h4>
+                    <Badge variant="secondary">Miễn phí</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {AVAILABLE_FREE_MODELS.find((m) => m.id === selectedModel)?.description}
+                  </p>
+                </div>
+              )}
+
+              <div className="rounded-lg border p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-2">
+                  Lưu ý về giới hạn
+                </h4>
+                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                  <li>• Miễn phí: 50 yêu cầu/ngày</li>
+                  <li>• Với $10+ credits: 1000 yêu cầu/ngày</li>
+                  <li>• Không cần thẻ tín dụng để bắt đầu</li>
+                </ul>
+              </div>
+
+              <Button onClick={handleSaveModel} disabled={isSavingModel}>
+                {isSavingModel ? "Đang lưu..." : "Lưu cài đặt AI"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

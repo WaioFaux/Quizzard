@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AVAILABLE_FREE_MODELS, DEFAULT_MODEL } from "./ai/available-models";
 
 const required = (key: string): string => {
   const val = process.env[key];
@@ -13,8 +14,13 @@ export const config = {
   session: {
     secret: required("SESSION_SECRET"),
   },
+  openrouter: {
+    apiKey: process.env.OPENROUTER_API_KEY,
+    defaultModel: process.env.OPENROUTER_DEFAULT_MODEL ?? DEFAULT_MODEL,
+    availableModels: AVAILABLE_FREE_MODELS,
+  },
   gemini: {
-    apiKey: required("GEMINI_API_KEY"),
+    apiKey: process.env.GEMINI_API_KEY,
     model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
   },
   app: {

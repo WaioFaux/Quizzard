@@ -4,12 +4,14 @@
  *
  * AI Processing Phases:
  * 1. Session Start - Return default config immediately (no blocking AI call)
- * 2. Generation - Call Gemini per type/difficulty bucket, blind recheck each question, save to DB
+ * 2. Generation - Call AI per type/difficulty bucket, blind recheck each question, save to DB
+ * 
+ * Uses OpenRouter for AI responses with free models
  */
 
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
-import { callGeminiForJSON } from "./gemini-client";
+import { callOpenRouterForJSON, isOpenRouterConfigured } from "./openrouter-client";
 import {
   QuestionProposal,
   GenerationPlan,
@@ -18,7 +20,11 @@ import {
   DifficultyLevel,
   getTypeDifficultyPrompt,
 } from "./qb-chat-prompts";
-import { generateFullQuestionBank, blindRecheck, type GeneratedQuestion } from "./gemini-client";
+import { 
+  type GeneratedQuestion, 
+  blindRecheck as geminiBlindRecheck,
+  generateMockQuestions,
+} from "./gemini-client";
 import { createQuestion } from "../services/question-bank.service";
 import { QuestionStatus, QuizStatus } from "@prisma/client";
 import { logger } from "../utils/logger";
@@ -333,7 +339,7 @@ export async function generateQuestions(
         materialText
       );
 
-      const response = await callGeminiForJSON<{ questions: QuestionProposal[] }>(prompt);
+      const response = await callOpenRouterForJSON<{ questions: QuestionProposal[] }>(prompt);
 
       const questions = (response.questions || []).map((q) => ({
         ...q,
@@ -385,7 +391,7 @@ export async function generateQuestions(
       }
 
       // Blind recheck
-      const recheck = await blindRecheck(q as unknown as GeneratedQuestion);
+      const recheck = await geminiBlindRecheck(q as unknown as GeneratedQuestion);
 
       const status: QuestionStatus = recheck.flagged
         ? QuestionStatus.FLAGGED_FOR_REVIEW
