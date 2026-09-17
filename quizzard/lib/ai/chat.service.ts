@@ -1,11 +1,13 @@
 /**
  * AI Chat Service
  * Handles the two-phase conversation flow for lecture generation
+ * 
+ * Supports both OpenRouter and Gemini providers
  */
 
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
-import { callGeminiForJSON } from "./gemini-client";
+import { callAIForJSON, isProviderConfigured, getConfiguredProviders, type AIProvider } from "./ai-client";
 import {
   ChatMessage,
   LectureProposal,
@@ -15,6 +17,37 @@ import {
   getConfirmPrompt,
 } from "./chat-prompts";
 import { logger } from "../utils/logger";
+
+/**
+ * Get AI settings from request headers or use defaults
+ * In production, this would come from a database or authenticated session
+ */
+function getAISettingsFromHeaders(headers?: Headers): { provider: AIProvider; model: string } {
+  // Try to get from headers first (set by API route)
+  const provider = headers?.get("x-ai-provider") as AIProvider | null;
+  const model = headers?.get("x-ai-model");
+
+  if (provider && model) {
+    return { provider, model };
+  }
+
+  // Check which providers are configured
+  const configuredProviders = getConfiguredProviders();
+
+  if (configuredProviders.length === 0) {
+    throw new Error("No AI provider configured. Please set GEMINI_API_KEY or OPENROUTER_API_KEY in your environment.");
+  }
+
+  // Use first configured provider
+  const providerToUse = configuredProviders[0];
+
+  return {
+    provider: providerToUse,
+    model: providerToUse === "openrouter"
+      ? "deepseek/deepseek-v4.1-flash"
+      : "gemini-3.6-flash",
+  };
+}
 
 // Chat state stored in memory (in production, use Redis or database)
 interface ChatSession {
@@ -100,7 +133,8 @@ interface ChatResult {
 export async function startChatSession(
   teacherId: string,
   classId: string,
-  materialId: string
+  materialId: string,
+  headers?: Headers
 ): Promise<ChatResult> {
   console.log("[AI Chat] Starting new chat session", {
     teacherId,
@@ -108,6 +142,9 @@ export async function startChatSession(
     materialId,
     timestamp: new Date().toISOString(),
   });
+
+  // Get AI settings
+  const aiSettings = getAISettingsFromHeaders(headers);
 
   // Verify material exists and is accessible
   const material = await prisma.material.findUnique({
@@ -145,7 +182,7 @@ export async function startChatSession(
   if (session.messages.length === 0) {
     try {
       const prompt = getInitialAnalysisPrompt(material.extractedText);
-      const aiResponse = await callGeminiForJSON<ChatResponse>(prompt);
+      const aiResponse = await callAIForJSON<ChatResponse>(prompt, aiSettings);
 
       session.messages.push({
         role: "assistant",
@@ -159,6 +196,8 @@ export async function startChatSession(
         teacherId,
         materialId,
         proposalCount: session.proposals.length,
+        provider: aiSettings.provider,
+        model: aiSettings.model,
       });
 
       return {
@@ -167,7 +206,7 @@ export async function startChatSession(
         readyToConfirm: aiResponse.readyToConfirm ?? true,
       };
     } catch (error) {
-      console.error("[AI Chat] Error calling Gemini:", error);
+      console.error("[AI Chat] Error calling AI:", error);
       if (error instanceof Error) {
         console.error("[AI Chat] Stack:", error.stack);
       }
@@ -193,7 +232,8 @@ export async function startChatSession(
 export async function sendChatMessage(
   teacherId: string,
   materialId: string,
-  userMessage: string
+  userMessage: string,
+  headers?: Headers
 ): Promise<ChatResult> {
   console.log("[AI Chat] User message received", {
     teacherId,
@@ -201,6 +241,9 @@ export async function sendChatMessage(
     messageLength: userMessage.length,
     timestamp: new Date().toISOString(),
   });
+
+  // Get AI settings
+  const aiSettings = getAISettingsFromHeaders(headers);
 
   const session = getSession(teacherId, materialId);
 
@@ -217,7 +260,7 @@ export async function sendChatMessage(
 
   try {
     const prompt = getFollowUpPrompt(session.proposals, userMessage);
-    const aiResponse = await callGeminiForJSON<ChatResponse>(prompt);
+    const aiResponse = await callAIForJSON<ChatResponse>(prompt, aiSettings);
 
     session.messages.push({
       role: "assistant",
@@ -255,13 +298,17 @@ export async function sendChatMessage(
  */
 export async function confirmLecturePlan(
   teacherId: string,
-  materialId: string
+  materialId: string,
+  headers?: Headers
 ): Promise<ChatResult & { createdLectures: Array<{ lectureId: string; quizId: string }> }> {
   console.log("[AI Chat] Plan confirmation requested", {
     teacherId,
     materialId,
     timestamp: new Date().toISOString(),
   });
+
+  // Get AI settings
+  const aiSettings = getAISettingsFromHeaders(headers);
 
   const session = getSession(teacherId, materialId);
 
@@ -283,10 +330,10 @@ export async function confirmLecturePlan(
 
   try {
     const prompt = getConfirmPrompt(session.proposals);
-    const aiResponse = await callGeminiForJSON<{
+    const aiResponse = await callAIForJSON<{
       message: string;
       lectures: LectureFormat[];
-    }>(prompt);
+    }>(prompt, aiSettings);
 
     if (!aiResponse.lectures || aiResponse.lectures.length === 0) {
       throw new Error("No lectures generated from AI response");

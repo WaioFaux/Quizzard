@@ -12,6 +12,27 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
+import {
+  ALL_MODELS,
+  DEFAULT_MODEL,
+  DEFAULT_PROVIDER,
+  getModelsByProvider,
+  formatContextLength,
+  formatPrice,
+  type ModelOption,
+  type AIProvider,
+} from "@/lib/ai/available-models";
 
 interface User {
   id: string;
@@ -21,6 +42,9 @@ interface User {
   avatarUrl: string | null;
   createdAt: string;
 }
+
+const PROVIDER_STORAGE_KEY = "quizzard-ai-provider";
+const MODEL_STORAGE_KEY = "quizzard-ai-model";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -39,9 +63,44 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
 
+  // AI Settings state
+  const [selectedProvider, setSelectedProvider] = useState<AIProvider>(DEFAULT_PROVIDER);
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL);
+  const [isSavingAI, setIsSavingAI] = useState(false);
+
+  // Get available models for current provider
+  const availableModels = getModelsByProvider(selectedProvider);
+
   useEffect(() => {
     fetchUser();
+    // Load saved preferences from localStorage
+    const savedProvider = localStorage.getItem(PROVIDER_STORAGE_KEY) as AIProvider | null;
+    const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+
+    if (savedProvider) {
+      setSelectedProvider(savedProvider);
+    }
+
+    if (savedModel) {
+      // Validate that the saved model exists and matches the provider
+      const model = ALL_MODELS.find((m) => m.id === savedModel);
+      if (model && model.provider === (savedProvider || DEFAULT_PROVIDER)) {
+        setSelectedModel(savedModel);
+      }
+    }
   }, []);
+
+  // Update model selection when provider changes
+  useEffect(() => {
+    const modelsForProvider = getModelsByProvider(selectedProvider);
+    if (modelsForProvider.length > 0) {
+      // Select first available model for the new provider
+      const currentModel = ALL_MODELS.find((m) => m.id === selectedModel);
+      if (!currentModel || currentModel.provider !== selectedProvider) {
+        setSelectedModel(modelsForProvider[0].id);
+      }
+    }
+  }, [selectedProvider]);
 
   function handleAvatarUpdate(avatarUrl: string | null) {
     setUser((prev) => (prev ? { ...prev, avatarUrl } : null));
@@ -148,6 +207,33 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleSaveAI() {
+    setIsSavingAI(true);
+
+    try {
+      localStorage.setItem(PROVIDER_STORAGE_KEY, selectedProvider);
+      localStorage.setItem(MODEL_STORAGE_KEY, selectedModel);
+
+      toast({
+        title: "Thành công",
+        description: "Cài đặt AI đã được lưu",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể lưu cài đặt AI",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingAI(false);
+    }
+  }
+
+  function getModelById(modelId: string): ModelOption | undefined {
+    return ALL_MODELS.find((m) => m.id === modelId);
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("vi-VN", {
       day: "numeric",
@@ -173,6 +259,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Hồ sơ</TabsTrigger>
+          <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="security">Bảo mật</TabsTrigger>
           <TabsTrigger value="account">Tài khoản</TabsTrigger>
         </TabsList>
@@ -223,6 +310,146 @@ export default function SettingsPage() {
                   {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AI Tab */}
+        <TabsContent value="ai">
+          <Card>
+            <CardHeader>
+              <CardTitle>Cài đặt AI</CardTitle>
+              <CardDescription>
+                Chọn nhà cung cấp và mô hình AI cho việc tạo câu hỏi và bài giảng
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* API Key Status */}
+              <div className="rounded-lg border p-4 bg-muted/30 space-y-3">
+                <h4 className="font-medium">Trạng thái API Keys</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${selectedProvider === "gemini" ? "bg-green-500" : "bg-gray-300"}`} />
+                    <span>Gemini</span>
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {selectedProvider === "gemini" ? "Đang sử dụng" : "Có sẵn"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${selectedProvider === "openrouter" ? "bg-green-500" : "bg-gray-300"}`} />
+                    <span>OpenRouter</span>
+                    <Badge variant="outline" className="ml-auto text-xs">
+                      {selectedProvider === "openrouter" ? "Đang sử dụng" : "Có sẵn"}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  API keys được cấu hình trong file .env trên server
+                </p>
+              </div>
+
+              {/* Provider Selection */}
+              <div className="space-y-3">
+                <Label>Nhà cung cấp AI</Label>
+                <RadioGroup
+                  value={selectedProvider}
+                  onValueChange={(value) => setSelectedProvider(value as AIProvider)}
+                  className="flex flex-col space-y-2"
+                >
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="gemini" id="gemini" />
+                    <div className="flex-1">
+                      <Label htmlFor="gemini" className="cursor-pointer font-medium">
+                        Google Gemini
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Sử dụng API key Gemini của bạn
+                      </p>
+                    </div>
+                    <Badge variant="outline">Miễn phí tier</Badge>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
+                    <RadioGroupItem value="openrouter" id="openrouter" />
+                    <div className="flex-1">
+                      <Label htmlFor="openrouter" className="cursor-pointer font-medium">
+                        OpenRouter
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        Truy cập nhiều mô hình khác nhau (DeepSeek, GPT, Claude, v.v.)
+                      </p>
+                    </div>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <Separator />
+
+              {/* Model Selection */}
+              <div className="space-y-3">
+                <Label htmlFor="model">Mô hình AI</Label>
+                <Select value={selectedModel} onValueChange={setSelectedModel}>
+                  <SelectTrigger id="model">
+                    <SelectValue placeholder="Chọn mô hình AI" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableModels.map((model) => (
+                      <SelectItem key={model.id} value={model.id}>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="font-medium">{model.name}</span>
+                          <div className="flex items-center gap-2 ml-4">
+                            {model.isFree && <Badge variant="secondary">Free</Badge>}
+                            <span className="text-xs text-muted-foreground">
+                              {formatContextLength(model.contextLength)}
+                            </span>
+                          </div>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Model Info Panel */}
+              {selectedModel && (
+                <div className="rounded-lg border p-4 bg-muted/50 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">{getModelById(selectedModel)?.name}</h4>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={selectedProvider === "openrouter" ? "default" : "secondary"}>
+                        {selectedProvider === "openrouter" ? "OpenRouter" : "Gemini"}
+                      </Badge>
+                      {getModelById(selectedModel)?.isFree && (
+                        <Badge variant="outline">Miễn phí</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {getModelById(selectedModel)?.description}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <span>Context: {formatContextLength(getModelById(selectedModel)?.contextLength || 0)}</span>
+                    {getModelById(selectedModel)?.price && (
+                      <span>Price: {formatPrice(getModelById(selectedModel)?.price)}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Info Box */}
+              <div className="rounded-lg border p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-2">
+                  Lưu ý về giới hạn
+                </h4>
+                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+                  <li>Gemini: 15 requests/minute, 1500 requests/day (free tier)</li>
+                  <li>OpenRouter Free: 50 requests/day</li>
+                  <li>OpenRouter Paid: Tùy thuộc vào mô hình và credits</li>
+                </ul>
+              </div>
+
+              <Button onClick={handleSaveAI} disabled={isSavingAI}>
+                {isSavingAI ? "Đang lưu..." : "Lưu cài đặt AI"}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

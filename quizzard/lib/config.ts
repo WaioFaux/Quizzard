@@ -1,21 +1,24 @@
 import { z } from "zod";
 
-const required = (key: string): string => {
-  const val = process.env[key];
-  if (!val) throw new Error(`${key} environment variable is required`);
-  return val;
+// Optional env var helper - returns undefined if not set
+const optional = (key: string): string | undefined => {
+  return process.env[key];
 };
 
 export const config = {
   db: {
-    url: required("DATABASE_URL"),
+    url: optional("DATABASE_URL") ?? "file:./dev.db",
   },
   session: {
-    secret: required("SESSION_SECRET"),
+    secret: optional("SESSION_SECRET") ?? "dev-secret-change-in-production",
+  },
+  openrouter: {
+    apiKey: optional("OPENROUTER_API_KEY"),
+    defaultModel: optional("OPENROUTER_DEFAULT_MODEL") ?? "deepseek/deepseek-v4.1-flash",
   },
   gemini: {
-    apiKey: required("GEMINI_API_KEY"),
-    model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+    apiKey: optional("GEMINI_API_KEY"),
+    model: optional("GEMINI_MODEL") ?? "gemini-3.6-flash",
   },
   app: {
     url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",

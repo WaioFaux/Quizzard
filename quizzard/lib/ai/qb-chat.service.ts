@@ -4,12 +4,14 @@
  *
  * AI Processing Phases:
  * 1. Session Start - Return default config immediately (no blocking AI call)
- * 2. Generation - Call Gemini per type/difficulty bucket, blind recheck each question, save to DB
+ * 2. Generation - Call AI per type/difficulty bucket, blind recheck each question, save to DB
+ * 
+ * Supports both OpenRouter and Gemini providers
  */
 
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
-import { callGeminiForJSON } from "./gemini-client";
+import { callAIForJSON, getConfiguredProviders, blindRecheck, type AIProvider, type GeneratedQuestion } from "./ai-client";
 import {
   QuestionProposal,
   GenerationPlan,
@@ -18,7 +20,6 @@ import {
   DifficultyLevel,
   getTypeDifficultyPrompt,
 } from "./qb-chat-prompts";
-import { generateFullQuestionBank, blindRecheck, type GeneratedQuestion } from "./gemini-client";
 import { createQuestion } from "../services/question-bank.service";
 import { QuestionStatus, QuizStatus } from "@prisma/client";
 import { logger } from "../utils/logger";
@@ -33,6 +34,33 @@ const LOG_PHASE = {
   GENERATION_COMPLETE: "GENERATION_COMPLETE",
   ERROR: "ERROR",
 } as const;
+
+/**
+ * Get AI settings from request headers or use defaults
+ */
+function getAISettingsFromHeaders(headers?: Headers): { provider: AIProvider; model: string } {
+  const provider = headers?.get("x-ai-provider") as AIProvider | null;
+  const model = headers?.get("x-ai-model");
+
+  if (provider && model) {
+    return { provider, model };
+  }
+
+  const configuredProviders = getConfiguredProviders();
+
+  if (configuredProviders.length === 0) {
+    throw new Error("No AI provider configured. Please set GEMINI_API_KEY or OPENROUTER_API_KEY in your environment.");
+  }
+
+  const providerToUse = configuredProviders[0];
+
+  return {
+    provider: providerToUse,
+    model: providerToUse === "openrouter"
+      ? "deepseek/deepseek-v4.1-flash"
+      : "gemini-3.6-flash",
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -242,13 +270,17 @@ export function saveQBPlan(
 
 export async function generateQuestions(
   teacherId: string,
-  quizId: string
+  quizId: string,
+  headers?: Headers
 ): Promise<QBChatResult & { createdQuestions?: number }> {
   console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_START}] Starting question generation`, {
     quizId,
     teacherId,
     timestamp: new Date().toISOString(),
   });
+
+  // Get AI settings
+  const aiSettings = getAISettingsFromHeaders(headers);
 
   const session = getSession(teacherId, quizId);
 
@@ -275,14 +307,20 @@ export async function generateQuestions(
     throw new NotFoundError("Quiz");
   }
 
-  const materialText = quiz.lecture.material?.extractedText;
+  const materialText = quiz.lecture.material?.extractedText ?? undefined;
 
   session.phase = "generating";
   updateSession(session);
 
-  const enabledTypes: QuestionType[] = ["MCQ", "SHORT_ANSWER", "CALCULATION"].filter(
-    (t) => plan[t as keyof GenerationPlan]?.enabled
-  ) as QuestionType[];
+  // Get enabled types from the plan
+  const enabledTypes: QuestionType[] = [];
+  const typeKeys: QuestionType[] = ["MCQ", "SHORT_ANSWER", "CALCULATION"];
+  for (const t of typeKeys) {
+    const config = plan[t];
+    if (config && typeof config === "object" && "enabled" in config && config.enabled) {
+      enabledTypes.push(t);
+    }
+  }
 
   if (enabledTypes.length === 0) {
     throw new Error("No question types are enabled. Please enable at least one type.");
@@ -333,7 +371,7 @@ export async function generateQuestions(
         materialText
       );
 
-      const response = await callGeminiForJSON<{ questions: QuestionProposal[] }>(prompt);
+      const response = await callAIForJSON<{ questions: QuestionProposal[] }>(prompt, aiSettings);
 
       const questions = (response.questions || []).map((q) => ({
         ...q,
@@ -385,7 +423,7 @@ export async function generateQuestions(
       }
 
       // Blind recheck
-      const recheck = await blindRecheck(q as unknown as GeneratedQuestion);
+      const recheck = await blindRecheck(q as unknown as GeneratedQuestion, aiSettings.provider, aiSettings.model);
 
       const status: QuestionStatus = recheck.flagged
         ? QuestionStatus.FLAGGED_FOR_REVIEW
@@ -395,7 +433,7 @@ export async function generateQuestions(
         type: q.type,
         content: q as unknown as Record<string, unknown>,
         status,
-        generationInstruction: plan.customInstructions ?? null,
+        generationInstruction: plan.customInstructions ?? undefined,
       });
 
       createdCount++;
