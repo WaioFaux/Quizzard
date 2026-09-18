@@ -37,9 +37,9 @@ These are locked. Do not simplify them away even if a more obvious implementatio
 - Turn on Plan Mode for anything touching more than one file, or one API route plus one Prisma model.
 - Before editing schema, API routes, or AI-calling code, check for a matching `.cursor/rules/*.mdc` file — those carry glob-scoped detail this file intentionally omits.
 - Prefer the smallest change that still satisfies the five decisions above over a more "elegant" rewrite.
-- Build in vertical slices: a feature is done when its full path (UI → API route → service → Prisma → back to UI) works end to end, not when one layer looks complete. Build order is in `docs/PRD.md` §10.
+- Build in vertical slices: a feature is done when its full path (UI → API route → service → Prisma → back to UI) works end to end, not when one layer looks complete. Build order is in `docs/PRD.md` §12.
 - Any Prisma schema change: update `prisma/schema.prisma` → `npx prisma migrate dev` → update the TypeScript interfaces that mirror `Json` fields (`docs/ARCHITECTURE.md`).
-- Any Gemini call: go through the `callGeminiForJSON<T>` adapter (`docs/ARCHITECTURE.md`) — never call the API directly from a route handler or component.
+- Any AI call: go through the appropriate service (`lib/ai/chat.service.ts`, `lib/ai/generation.service.ts`, etc.) — never call the API directly from a route handler or component.
 
 ## Where to look for what
 

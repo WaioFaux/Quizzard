@@ -33,33 +33,37 @@ DATABASE_URL="file:./dev.db"                    # SQLite dev
 # DATABASE_URL="postgresql://user:pass@host/db" # PostgreSQL prod
 
 # Session
-SESSION_SECRET="min-32-char-random-string-here"
+SESSION_SECRET="min-32-char-random-string-here"  # Generate with: openssl rand -base64 32
 
-# AI
+# AI — at least one provider required
 GEMINI_API_KEY="your-gemini-api-key"
-GEMINI_MODEL="gemini-2.0-flash"                # Default model
+GEMINI_MODEL="gemini-3.6-flash"              # Default model
+OPENROUTER_API_KEY="your-openrouter-api-key"  # Optional alternative
+OPENROUTER_DEFAULT_MODEL="deepseek/deepseek-v4.1-flash"
 
 # App
-NEXT_PUBLIC_APP_URL="http://localhost:3000"     # For CORS / cookies
+NEXT_PUBLIC_APP_URL="http://localhost:3000"   # For CORS / cookies
 NODE_ENV="development"
 
-# File Storage (production)
-FILE_STORAGE_PATH="./uploads"                   # Absolute path in prod
+# File Storage
+FILE_STORAGE_PATH="./public/uploads"           # Relative to quizzard/ root
 ```
 
 ### 2.2 Optional Env Vars
 
 ```env
 # AI Quota
-GEMINI_DAILY_QUOTA=1000                         # Max API calls per day (optional)
+GEMINI_DAILY_QUOTA=1000                       # Max API calls per day (optional)
 
 # Rate Limiting
-RATE_LIMIT_WINDOW_MS=60000                      # Default: 1 minute
-RATE_LIMIT_MAX=100                             # Default: 100 per window
+RATE_LIMIT_WINDOW_MS=60000                    # Default: 1 minute
+RATE_LIMIT_MAX=100                           # Default: 100 per window
 
 # Logging
-LOG_LEVEL="info"                               # debug | info | warn | error
+LOG_LEVEL="info"                              # debug | info | warn | error
 ```
+
+> **Note**: `OPENROUTER_API_KEY` is supported as an alternative AI provider. If both are set, `GEMINI_API_KEY` takes precedence.
 
 ### 2.3 Env Var Management Rules
 - Never commit `.env` files or any file containing secrets.
@@ -138,87 +142,118 @@ Set `connection_limit` based on your hosting plan. For Vercel serverless: use Pr
 
 ## 4. Folder Structure (Full)
 
+> The Next.js app root is the `quizzard/` subdirectory. Route groups use flat `teacher/` and `student/` directories (no parentheses).
+
 ```
 quizzard/                    # Next.js app root
-├── app/                     # App Router pages
-│   ├── (teacher)/           # Teacher-facing routes
-│   │   ├── layout.tsx       # Teacher layout (auth guard)
+├── app/
+│   ├── (auth)/             # Auth pages (no layout needed)
+│   │   ├── login/page.tsx
+│   │   └── signup/page.tsx
+│   ├── teacher/            # Teacher layout (auth guard)
+│   │   ├── layout.tsx
+│   │   ├── analytics/page.tsx         # Analytics + class/quiz leaderboards
 │   │   ├── classes/
-│   │   │   ├── page.tsx     # Class list
+│   │   │   ├── page.tsx              # Class list
 │   │   │   └── [classId]/
-│   │   │       ├── page.tsx             # Class dashboard
-│   │   │       ├── materials/
-│   │   │       ├── lectures/
-│   │   │       └── quizzes/
-│   │   └── reports/
-│   │       └── page.tsx     # Question reports inbox
-│   ├── (student)/           # Student-facing routes
-│   │   ├── layout.tsx       # Student layout (auth guard)
+│   │   │       ├── page.tsx           # Class detail
+│   │   │       ├── quizzes/
+│   │   │       │   └── [quizId]/
+│   │   │       │       ├── page.tsx           # Quiz detail
+│   │   │       │       ├── question-bank/page.tsx
+│   │   │       │       └── publish/page.tsx
+│   │   │       └── lectures/page.tsx
+│   │   └── settings/page.tsx
+│   ├── student/            # Student layout (auth guard)
+│   │   ├── layout.tsx
 │   │   ├── classes/
-│   │   │   ├── page.tsx     # Enrolled classes
-│   │   │   └── join/
-│   │   │       └── page.tsx # Join by code
-│   │   ├── class/[classId]/
-│   │   │   ├── page.tsx     # Class overview
-│   │   │   └── quiz/[quizId]/
-│   │   │       ├── page.tsx         # Quiz intro
-│   │   │       ├── attempt/
-│   │   │       │   └── page.tsx    # Quiz-taking interface
-│   │   │       └── results/
-│   │   │           └── page.tsx    # Results view
-│   │   └── leaderboard/
-│   │       └── page.tsx     # Class leaderboard
-│   ├── api/                 # API route handlers
+│   │   │   ├── page.tsx             # Enrolled classes
+│   │   │   ├── join/page.tsx        # Join by code
+│   │   │   └── [classId]/
+│   │   │       ├── page.tsx          # Class detail
+│   │   │       ├── quiz/
+│   │   │       │   └── [quizId]/
+│   │   │       │       ├── page.tsx       # Quiz intro
+│   │   │       │       ├── attempt/page.tsx
+│   │   │       │       └── results/page.tsx
+│   │   │       ├── leaderboard/page.tsx
+│   │   │       └── full-leaderboard/page.tsx
+│   │   ├── progress/page.tsx        # Learning progress tracker
+│   │   ├── leaderboard/page.tsx      # Legacy quiz leaderboard (requires ?quizId=)
+│   │   └── settings/page.tsx
+│   ├── api/                           # API route handlers
 │   │   ├── auth/
 │   │   │   ├── signup/route.ts
 │   │   │   ├── login/route.ts
-│   │   │   └── logout/route.ts
+│   │   │   ├── logout/route.ts
+│   │   │   └── me/route.ts
 │   │   ├── classes/
-│   │   │   ├── route.ts          # List / create
-│   │   │   ├── [classId]/route.ts
-│   │   │   ├── [classId]/join/route.ts
-│   │   │   └── [classId]/students/route.ts
+│   │   │   ├── route.ts
+│   │   │   ├── enrollments/route.ts
+│   │   │   └── [classId]/
+│   │   │       ├── route.ts
+│   │   │       ├── join/route.ts
+│   │   │       ├── students/route.ts
+│   │   │       └── leaderboard/route.ts
 │   │   ├── materials/
-│   │   │   ├── route.ts           # Upload
-│   │   │   └── [materialId]/route.ts
+│   │   │   ├── route.ts
+│   │   │   └── [materialId]/
+│   │   │       ├── route.ts
+│   │   │       └── chat/route.ts    # Chat with material (AI)
 │   │   ├── lectures/
-│   │   │   ├── route.ts           # AI-propose lectures
+│   │   │   ├── route.ts
 │   │   │   └── [lectureId]/route.ts
 │   │   ├── quizzes/
-│   │   │   ├── route.ts           # Create quiz
-│   │   │   ├── [quizId]/
-│   │   │   │   ├── route.ts       # Get / update config
-│   │   │   │   ├── preview/route.ts    # Sample generation
-│   │   │   │   ├── publish/route.ts
-│   │   │   │   ├── deadline/route.ts   # Extend deadline
-│   │   │   │   ├── question-bank/
-│   │   │   │   │   ├── route.ts        # List questions
-│   │   │   │   │   ├── generate/route.ts
-│   │   │   │   │   ├── upload/route.ts
-│   │   │   │   │   └── [itemId]/
-│   │   │   │   │       ├── route.ts    # Get / update question
-│   │   │   │   │       └── status/route.ts
-│   │   │   │   └── leaderboard/route.ts
+│   │   │   ├── route.ts
+│   │   │   └── [quizId]/
+│   │   │       ├── route.ts
+│   │   │       ├── publish/route.ts
+│   │   │       ├── deadline/route.ts
+│   │   │       ├── preview/route.ts
+│   │   │       ├── info/route.ts
+│   │   │       ├── chat/route.ts    # Chat about quiz config (AI)
+│   │   │       ├── leaderboard/route.ts
+│   │   │       └── question-bank/
+│   │   │           ├── route.ts
+│   │   │           ├── generate/route.ts
+│   │   │           ├── upload/route.ts  # Import CSV/XLSX
+│   │   │           ├── export/route.ts   # Export as CSV
+│   │   │           └── [itemId]/
+│   │   │               ├── route.ts
+│   │   │               └── status/route.ts
 │   │   ├── attempts/
-│   │   │   ├── route.ts           # Start attempt
+│   │   │   ├── route.ts          # GET list / POST start
 │   │   │   └── [attemptId]/
 │   │   │       ├── route.ts
 │   │   │       └── submit/route.ts
 │   │   ├── reports/
-│   │   │   └── route.ts           # Submit report
-│   │   └── revalidate/route.ts    # On-demand ISR
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Landing / login redirect
-│   └── globals.css
+│   │   │   ├── route.ts
+│   │   │   └── [reportId]/route.ts
+│   │   ├── analytics/
+│   │   │   └── teacher/
+│   │   │       ├── route.ts
+│   │   │       └── leaderboards/route.ts
+│   │   ├── student/
+│   │   │   └── progress/route.ts
+│   │   ├── users/
+│   │   │   ├── avatar/route.ts
+│   │   │   ├── profile/route.ts
+│   │   │   └── password/route.ts
+│   │   └── revalidate/route.ts
+│   ├── layout.tsx
+│   └── page.tsx
 ├── components/
 │   ├── ui/                # shadcn/ui base components
-│   ├── auth/              # LoginForm, SignupForm
-│   ├── quiz/              # QuizCard, QuestionRenderer, Timer
-│   ├── class/             # ClassCard, ClassForm, JoinForm
-│   ├── question-bank/      # QuestionCard, QuestionEditor
-│   ├── attempts/          # AttemptHistory, ScoreDisplay
-│   └── reports/           # ReportForm, ReportList
+│   ├── student-sidebar.tsx
+│   ├── teacher-sidebar.tsx
+│   ├── chat-panel.tsx
+│   ├── qb-chat-panel.tsx
+│   ├── logout-button.tsx
+│   ├── settings/
+│   └── hooks/
 ├── lib/
+│   ├── db.ts              # Prisma client singleton
+│   ├── config.ts          # Environment variable loader
 │   ├── services/          # Business logic (one file per domain)
 │   │   ├── auth.service.ts
 │   │   ├── class.service.ts
@@ -229,51 +264,51 @@ quizzard/                    # Next.js app root
 │   │   ├── attempt.service.ts
 │   │   └── report.service.ts
 │   ├── ai/
-│   │   ├── gemini-client.ts
-│   │   ├── prompts/
-│   │   │   ├── generate-questions.ts
-│   │   │   ├── propose-lectures.ts
-│   │   │   └── recheck-question.ts
-│   │   └── recheck-pipeline.ts
+│   │   ├── gemini-client.ts        # callGeminiForJSON<T>
+│   │   ├── available-models.ts
+│   │   ├── chat.service.ts         # General AI chat
+│   │   ├── chat-prompts.ts
+│   │   ├── prompts.ts
+│   │   ├── qb-chat.service.ts      # Question bank AI chat
+│   │   ├── qb-chat-prompts.ts
+│   │   └── generation.service.ts   # Question bank generation
 │   ├── question-types/    # Strategy pattern
 │   │   ├── mcq.strategy.ts
 │   │   ├── short-answer.strategy.ts
-│   │   ├── essay.strategy.ts
 │   │   ├── calculation.strategy.ts
+│   │   ├── types.ts
 │   │   └── index.ts
 │   ├── state-machines/
 │   │   ├── quiz.state-machine.ts
 │   │   ├── question.state-machine.ts
-│   │   └── attempt.state-machine.ts
+│   │   ├── attempt.state-machine.ts
+│   │   └── index.ts
 │   ├── pdf/
-│   │   ├── extract.ts
-│   │   └── process.ts
+│   │   └── extract.ts     # pdf-parse wrapper
 │   ├── middleware/
-│   │   ├── auth.ts        # Session validation helper
-│   │   ├── rate-limit.ts
-│   │   └── role-guard.ts
+│   │   ├── auth.ts        # requireTeacher / requireStudent
+│   │   └── rate-limit.ts
 │   ├── validation/
-│   │   └── schemas.ts     # Zod schemas for all inputs
-│   ├── utils/
-│   │   ├── logger.ts
-│   │   ├── errors.ts      # Custom error classes
-│   │   └── random.ts     # Seeding helpers for attempt randomization
-│   └── db.ts             # Prisma client singleton
+│   │   └── schemas.ts     # Zod schemas
+│   └── utils/
+│       ├── errors.ts
+│       ├── logger.ts
+│       ├── error-handler.ts
+│       └── utils.ts
 ├── prisma/
-│   ├── schema.prisma
-│   └── seed.ts            # Development seed data
+│   └── schema.prisma
 ├── public/
 │   └── uploads/           # Uploaded PDFs (gitignored)
 ├── .env.local
-├── .env.example           # Template with all required vars
-├── .gitignore
+├── .env.example
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── postcss.config.mjs
 ├── tsconfig.json
 ├── eslint.config.mjs
+├── vitest.config.ts
 └── package.json
-```
+
 
 ---
 

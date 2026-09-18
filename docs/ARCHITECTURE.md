@@ -4,20 +4,106 @@ Technical conventions and required patterns. Read before writing API routes, ser
 
 ## Folder structure
 
+The Next.js App Router project lives in the `quizzard/` subdirectory.
+
 ```
-app/
-  (teacher)/...           # teacher-facing routes
-  (student)/...           # student-facing routes
-  api/
+quizzard/app/
+  (auth)/                    # Login / signup pages
+    login/page.tsx
+    signup/page.tsx
+  teacher/                   # Teacher-facing routes (flat, no parentheses)
+    analytics/page.tsx       # Analytics dashboard + leaderboard tabs
     classes/
+      page.tsx               # Class list
+      [classId]/
+        page.tsx             # Class detail (tabs: Quizzes, Lectures, Materials, Students)
+        quizzes/
+          [quizId]/
+            page.tsx         # Quiz detail / configure
+            question-bank/
+              page.tsx       # Question bank management
+            publish/
+              page.tsx       # Publish confirmation
+        lectures/page.tsx
+    reports/page.tsx
+  student/                   # Student-facing routes (flat, no parentheses)
+    classes/
+      page.tsx               # Enrolled classes list
+      join/page.tsx          # Join class by code
+      [classId]/
+        page.tsx             # Class detail
+        quiz/
+          [quizId]/
+            page.tsx         # Quiz intro / start
+            attempt/page.tsx # Quiz-taking interface
+            results/page.tsx # Results view
+        leaderboard/page.tsx  # Class leaderboard
+        full-leaderboard/page.tsx
+    progress/page.tsx         # Learning progress tracker
+    leaderboard/page.tsx      # Legacy quiz leaderboard (requires ?quizId=)
+  api/
+    auth/
+      signup/route.ts
+      login/route.ts
+      logout/route.ts
+      me/route.ts
+    classes/
+      route.ts               # List / create classes
+      [classId]/
+        route.ts             # Get / update / delete class
+        join/route.ts        # Student join class
+        students/route.ts    # List enrolled students
+        leaderboard/route.ts # Class-wide leaderboard
+      enrollments/route.ts   # Student's enrollments
     materials/
+      route.ts               # Upload material
+      [materialId]/
+        route.ts             # Get / delete material
+        chat/route.ts        # Chat with material (AI)
     lectures/
+      route.ts               # List / create lectures
+      [lectureId]/route.ts   # Get / update / delete lecture
     quizzes/
-    question-bank/
+      route.ts               # Create quiz
+      [quizId]/
+        route.ts             # Get / update quiz
+        publish/route.ts     # Publish quiz
+        deadline/route.ts    # Extend deadline
+        preview/route.ts    # Generate sample questions (AI)
+        info/route.ts        # Quiz info for students
+        chat/route.ts        # Chat about quiz config (AI)
+        leaderboard/route.ts # Quiz-specific leaderboard
+        question-bank/
+          route.ts           # List questions
+          generate/route.ts  # Generate full bank (AI)
+          upload/route.ts    # Import CSV/XLSX
+          export/route.ts    # Export as CSV
+          [itemId]/
+            route.ts         # Get / update / delete question
+            status/route.ts  # Approve / flag question
     attempts/
+      route.ts               # List student attempts (GET) / start attempt (POST)
+      [attemptId]/
+        route.ts             # Get / auto-save attempt
+        submit/route.ts      # Submit attempt
     reports/
+      route.ts               # List reports (TEACHER) / submit report (STUDENT)
+      [reportId]/route.ts    # Resolve report (TEACHER)
+    analytics/
+      teacher/
+        route.ts             # Per-class stats, recent submissions
+        leaderboards/route.ts # Class + quiz leaderboards for teachers
+    student/
+      progress/route.ts       # Student progress across all classes
+    users/
+      avatar/route.ts        # Upload avatar
+      profile/route.ts       # Get / update profile
+      password/route.ts      # Change password
+    revalidate/route.ts      # On-demand ISR revalidation
+    [reportId]/route.ts
 lib/
-  services/                # one file per domain concept — all business logic lives here, not in route handlers
+  services/                  # one file per domain — all business logic lives here
+    auth.service.ts
     class.service.ts
     material.service.ts
     lecture.service.ts
@@ -26,22 +112,55 @@ lib/
     attempt.service.ts
     report.service.ts
   ai/
-    gemini-client.ts        # callGeminiForJSON<T> adapter — the ONLY place that calls the Gemini API
-    prompts/                # prompt templates, one file per use case
-    recheck-pipeline.ts     # blind re-check pipeline
-  question-types/            # Strategy pattern, one file per QuestionType
+    gemini-client.ts         # callGeminiForJSON<T> adapter — the ONLY place that calls Gemini
+    gemini-client.ts
+    available-models.ts      # Available model list
+    chat.service.ts          # General AI chat
+    chat-prompts.ts
+    prompts.ts
+    qb-chat.service.ts       # Question bank AI chat
+    qb-chat-prompts.ts
+    generation.service.ts    # Question bank generation orchestration
+  question-types/             # Strategy pattern, one file per QuestionType
     mcq.strategy.ts
     short-answer.strategy.ts
     calculation.strategy.ts
+    types.ts
     index.ts                 # strategy registry keyed by QuestionType
   state-machines/
-    quiz.state-machine.ts        # transitionQuiz()
-    question.state-machine.ts    # transitionQuestion()
-    attempt.state-machine.ts     # transitionAttempt()
+    quiz.state-machine.ts
+    question.state-machine.ts
+    attempt.state-machine.ts
+    index.ts
   pdf/
-    extract.ts               # pdftotext -layout wrapper + pdfplumber fallback for tables
+    extract.ts               # pdf-parse wrapper for PDF text extraction
+  middleware/
+    auth.ts                 # requireTeacher / requireStudent session helpers
+    rate-limit.ts            # Per-user + per-IP rate limiting
+  validation/
+    schemas.ts               # Zod schemas for all API inputs
+  utils/
+    errors.ts               # Typed error classes (AppError, NotFoundError, etc.)
+    logger.ts               # Structured JSON logging
+    error-handler.ts        # handleApiError() for API routes
+    schemas.ts
+    schemas.test.ts
+    errors.test.ts
+    utils.ts
 prisma/
   schema.prisma
+  migrations/
+components/
+  ui/                        # shadcn/ui base components
+  student-sidebar.tsx
+  teacher-sidebar.tsx
+  chat-panel.tsx             # General AI chat panel
+  qb-chat-panel.tsx          # Question bank generation chat panel
+  logout-button.tsx
+  settings/
+    avatar-upload.tsx
+  hooks/
+    use-toast.ts
 ```
 
 Route handlers stay thin: parse input, call a service function, return the result. All logic, validation, and Prisma calls live in `lib/services/*`.

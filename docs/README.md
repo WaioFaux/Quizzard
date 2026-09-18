@@ -2,6 +2,31 @@
 
 This directory contains all design and specification documents for the Quizzard project.
 
+## Implementation Status
+
+All five vertical slices from the build order (PRD §10) are **functionally complete**.
+
+| Feature | Status | Notes |
+|---|---|---|
+| Auth (signup / login / logout) | Implemented | iron-session, bcrypt password hashing |
+| Class management (create / join) | Implemented | Class code + password enrollment |
+| Material upload + PDF extraction | Implemented | `pdf-parse`, PROCESSING → PROCESSED status |
+| Quiz configuration + publish | Implemented | DRAFT → PUBLISHED state machine |
+| AI question generation + blind re-check | Implemented | Gemini API via `callGeminiForJSON`, independent re-check per question |
+| Question bank (approve / flag / edit / delete) | Implemented | Manual approval, status transitions |
+| CSV / XLSX import + export | Implemented | `/api/quizzes/:id/question-bank/upload` and `/export` |
+| Quiz attempt with snapshot + grading | Implemented | Question frozen at start, CALCULATION random rolling |
+| Deadline + time limit enforcement | Implemented | Server-side validation, client-side countdown |
+| Student results + report questions | Implemented | Per-question correct/incorrect, explanation, report button |
+| Class-specific leaderboards | Implemented | Per-class, per-quiz, podium + rankings |
+| Student progress tracker | Implemented | `/student/progress` — completed/available quizzes, stats |
+| Teacher analytics dashboard | Implemented | Per-class stats, recent submissions, leaderboard tabs |
+| Per-class / per-quiz leaderboards for teachers | Implemented | In analytics page, two-step class → quiz selection |
+| Teacher reports inbox (UI) | Not implemented | API route exists (`GET /api/reports`); no dedicated page yet |
+| AI lecture proposal from material | Not implemented | Materials are uploaded directly; lecture creation is manual |
+| Prisma seed script | Not implemented | `prisma/seed.ts` does not exist |
+| "Generate more" questions (UI) | Not implemented | API route supports count + instructions; no UI button yet |
+
 ## Document Index
 
 | Document | Purpose |
@@ -32,3 +57,8 @@ This directory contains all design and specification documents for the Quizzard 
 3. Time limit + auto-submit
 4. Multiple classes
 5. Class join flow
+
+### Question Types
+- **MCQ** — multiple choice with shuffled options per student
+- **SHORT_ANSWER** — free text answer, compared case-insensitively
+- **CALCULATION** — numeric answer with variables rolled per student, formula evaluated with `mathjs`

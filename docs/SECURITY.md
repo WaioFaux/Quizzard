@@ -307,7 +307,13 @@ Track significant events:
 
 ---
 
-## 9. Security Checklist (Pre-Production)
+## 9. Security Checklist (Development vs. Pre-Production)
+
+Items marked **[x]** are implemented. This checklist is for pre-production readiness — some items may still need review or hardening before production deployment.
+
+> **Note**: This project is in active development. The checklist reflects the current implementation state; not all items have been through production hardening.
+
+### Already Implemented
 
 - [x] All env vars documented with no defaults for secrets (`.env.example` created; session secret enforced at startup)
 - [x] `DATABASE_URL` uses a secure path or external DB with credentials
@@ -325,3 +331,10 @@ Track significant events:
 - [x] CORS restricted to app origin only
 - [x] Class passwords hashed with bcrypt (cost 12) in database
 - [x] `.env` excluded from git; `.env.example` included as template
+
+### Pre-Production (Not Yet Reviewed)
+
+- [ ] **Audit logging** — structured audit log for significant events (login, publish, attempt submission, question reports) is defined in §8.2 but not yet persisted to a log store.
+- [ ] **AI quota enforcement** — `GEMINI_DAILY_QUOTA` env var is defined but quota tracking is not enforced in code.
+- [ ] **Rate limit testing** — rate limiting is implemented but has not been load-tested.
+- [ ] **Penetration testing** — the full app has not been through security testing.

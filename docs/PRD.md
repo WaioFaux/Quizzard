@@ -140,3 +140,16 @@ Vertical slices — each one is a complete, runnable path before moving to the n
 3. **Slice 3 — Time limit.** Countdown timer + server-side elapsed-time enforcement + auto-submit.
 4. **Slice 4 — Multiple classes.** Teacher manages more than one class, each with its own leaderboard.
 5. **Slice 5 — Class join flow.** Student self-enrollment via class code + password. (May need to land earlier than Slice 4 in practice for testability — confirm before deferring.)
+
+## 11. Implementation Status
+
+All five vertical slices from the build order are **functionally complete**.
+
+The following individual features from this spec are **not yet implemented**:
+
+| Feature | Gap |
+|---|---|
+| AI lecture proposal (§5.3) | Materials are uploaded directly; lecture creation is manual |
+| Prisma seed script | `prisma/seed.ts` does not exist |
+| "Generate more" questions (§5.6) | API route supports appending with custom count + instructions; no UI button exists |
+| Question reports inbox (§5.8) | Students can submit reports; no dedicated teacher reports inbox page exists |
