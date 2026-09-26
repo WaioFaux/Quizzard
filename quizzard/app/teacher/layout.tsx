@@ -24,7 +24,7 @@ export default async function TeacherLayout({
     <div className="flex h-screen overflow-hidden">
       <TeacherSidebar teacherName={session.name} avatarUrl={user?.avatarUrl} />
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-slate-950">
+      <main className="flex-1 overflow-y-auto bg-background">
         {children}
       </main>
     </div>

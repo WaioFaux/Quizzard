@@ -143,7 +143,7 @@ export function AvatarUpload({
       {/* Avatar Preview */}
       <div
         className={cn(
-          "relative w-24 h-24 rounded-full overflow-hidden bg-slate-700 flex items-center justify-center",
+          "relative w-24 h-24 rounded-full overflow-hidden bg-muted flex items-center justify-center",
           isDragging && "ring-2 ring-primary ring-offset-2 ring-offset-background"
         )}
         onDrop={handleDrop}

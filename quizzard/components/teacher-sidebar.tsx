@@ -27,19 +27,19 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
   const initial = teacherName?.charAt(0).toUpperCase() || "T";
 
   return (
-    <aside className="w-64 shrink-0 border-r bg-slate-900 flex flex-col h-screen">
-      <div className="p-6 border-b border-slate-700 flex items-center gap-2.5">
+    <aside className="w-64 shrink-0 border-r bg-sidebar text-sidebar-foreground flex flex-col h-screen">
+      <div className="p-6 border-b border-sidebar-border flex items-center gap-2.5">
         <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
           <rect width="28" height="28" rx="8" fill="#4F46E5"/>
           <path d="M8 14.5L12 18.5L20 9.5" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
-        <span className="text-base font-semibold tracking-tight text-white">Quizzard</span>
+        <span className="text-base font-semibold tracking-tight text-sidebar-foreground">Quizzard</span>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
         <a
           href="/teacher/classes"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-300 hover:bg-slate-800 transition"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent transition"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
@@ -48,7 +48,7 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
         </a>
         <a
           href="/teacher/analytics"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 transition"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent transition"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="20" x2="18" y2="10" />
@@ -59,7 +59,7 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
         </a>
         <a
           href="/settings"
-          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 transition"
+          className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent transition"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3" />
@@ -69,7 +69,7 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
         </a>
       </nav>
 
-      <div className="p-4 border-t border-slate-700">
+      <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-3">
           {avatarUrl ? (
             <img
@@ -78,20 +78,20 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
               className="w-9 h-9 rounded-full object-cover"
             />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-semibold">
+            <div className="w-9 h-9 rounded-full bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center text-sm font-semibold">
               {initial}
             </div>
           )}
           <div className="leading-tight">
-            <p className="text-sm font-medium text-slate-200">{teacherName || "Teacher"}</p>
-            <p className="text-xs text-slate-500">Teacher</p>
+            <p className="text-sm font-medium text-sidebar-foreground">{teacherName || "Teacher"}</p>
+            <p className="text-xs text-sidebar-foreground/60">Teacher</p>
           </div>
         </div>
         <button
           type="button"
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="w-full flex items-center gap-2 text-xs text-slate-400 hover:text-rose-600 transition disabled:opacity-50"
+          className="w-full flex items-center gap-2 text-xs text-sidebar-foreground/60 hover:text-destructive transition disabled:opacity-50"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

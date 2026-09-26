@@ -33,6 +33,8 @@ import {
   type ModelOption,
   type AIProvider,
 } from "@/lib/ai/available-models";
+import { useTheme } from "next-themes";
+import { Moon, Sun } from "lucide-react";
 
 interface User {
   id: string;
@@ -49,6 +51,8 @@ const MODEL_STORAGE_KEY = "quizzard-ai-model";
 export default function SettingsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
@@ -72,6 +76,7 @@ export default function SettingsPage() {
   const availableModels = getModelsByProvider(selectedProvider);
 
   useEffect(() => {
+    setMounted(true);
     fetchUser();
     // Load saved preferences from localStorage
     const savedProvider = localStorage.getItem(PROVIDER_STORAGE_KEY) as AIProvider | null;
@@ -259,6 +264,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Hồ sơ</TabsTrigger>
+          <TabsTrigger value="appearance">Giao diện</TabsTrigger>
           <TabsTrigger value="ai">AI</TabsTrigger>
           <TabsTrigger value="security">Bảo mật</TabsTrigger>
           <TabsTrigger value="account">Tài khoản</TabsTrigger>
@@ -310,6 +316,68 @@ export default function SettingsPage() {
                   {isSavingProfile ? "Đang lưu..." : "Lưu thay đổi"}
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Appearance Tab */}
+        <TabsContent value="appearance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Giao diện</CardTitle>
+              <CardDescription>Tùy chỉnh giao diện ứng dụng</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <Label>Chế độ màu</Label>
+                <p className="text-sm text-muted-foreground">
+                  Chọn chế độ màu sắc phù hợp với bạn
+                </p>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setTheme("light")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                      theme === "light"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                      <Sun className="w-6 h-6 text-amber-500" />
+                    </div>
+                    <span className="text-sm font-medium">Sáng</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("dark")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                      theme === "dark"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center">
+                      <Moon className="w-6 h-6 text-slate-300" />
+                    </div>
+                    <span className="text-sm font-medium">Tối</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTheme("system")}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                      theme === "system"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-white to-slate-900 border border-gray-200 flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-white border border-gray-200" />
+                    </div>
+                    <span className="text-sm font-medium">Hệ thống</span>
+                  </button>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
