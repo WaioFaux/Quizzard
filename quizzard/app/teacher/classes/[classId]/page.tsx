@@ -752,7 +752,11 @@ export default function TeacherClassDashboardPage({
                 <Card
                   key={lecture.id}
                   className="cursor-pointer hover:bg-accent/50 transition-colors"
-                  onClick={() => router.push(`/teacher/classes/${classId}/quizzes/${lecture.quiz?.id || 'new'}`)}
+                  onClick={() =>
+                    router.push(
+                      `/teacher/classes/${classId}/quizzes/${lecture.quiz?.id || "new"}?lectureId=${lecture.id}`
+                    )
+                  }
                 >
                   <CardContent className="flex items-center justify-between py-4">
                     <div className="flex items-center gap-3">
@@ -766,12 +770,28 @@ export default function TeacherClassDashboardPage({
                             {lecture.quiz.questionsPerAttempt} questions • {lecture.quiz.timeLimitMinutes} min
                           </p>
                         ) : (
-                          <p className="text-sm text-muted-foreground">No quiz yet</p>
+                          <p className="text-sm text-muted-foreground">
+                            No quiz yet — click to create one
+                          </p>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {lecture.quiz && getStatusBadge(lecture.quiz.status)}
+                      {!lecture.quiz && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(
+                              `/teacher/classes/${classId}/quizzes/new?lectureId=${lecture.id}`
+                            );
+                          }}
+                        >
+                          Create Quiz
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

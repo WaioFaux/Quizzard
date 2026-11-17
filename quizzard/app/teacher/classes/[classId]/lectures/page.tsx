@@ -277,9 +277,23 @@ export default function LecturesPage({
                     </>
                   )}
                   {!lecture.quiz && (
-                    <Badge variant="outline" className="text-muted-foreground">
-                      No quiz
-                    </Badge>
+                    <>
+                      <Badge variant="outline" className="text-muted-foreground">
+                        No quiz
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(
+                            `/teacher/classes/${classId}/quizzes/new?lectureId=${lecture.id}`
+                          );
+                        }}
+                      >
+                        Create Quiz
+                      </Button>
+                    </>
                   )}
 
                   <Button
