@@ -24,7 +24,12 @@ export const config = {
     // Hard ceiling for a single provider call. Serverless functions have a
     // fixed wall-clock budget, so a provider that never answers must not be
     // allowed to consume all of it.
-    requestTimeoutMs: parseInt(optional("AI_REQUEST_TIMEOUT_MS") ?? "45000", 10),
+    requestTimeoutMs: parseInt(optional("AI_REQUEST_TIMEOUT_MS") ?? "20000", 10),
+    // Total wall-clock budget for one logical AI call, covering every retry
+    // and the fallback to the second provider. Keeps a request inside the
+    // serverless function limit so the client gets a real error message
+    // instead of a connection reset.
+    totalBudgetMs: parseInt(optional("AI_TOTAL_BUDGET_MS") ?? "45000", 10),
   },
   app: {
     url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",

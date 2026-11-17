@@ -231,6 +231,44 @@ export const CreateReportSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters").max(1000),
 });
 
+// ---------- Lecture planning chat ----------
+
+export const LectureProposalSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  startPage: z.number().int().min(0).max(100000),
+  endPage: z.number().int().min(0).max(100000),
+  description: z.string().max(1000).optional(),
+});
+
+export const LectureProposalsSchema = z
+  .array(LectureProposalSchema)
+  .min(1, "At least one lecture proposal is required")
+  .max(50, "Too many lecture proposals");
+
+export const ChatMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: z.string().min(1).max(20000),
+});
+
+// ---------- Question bank chat ----------
+
+const TypeConfigSchema = z.object({
+  enabled: z.boolean(),
+  count: z.number().int().min(0).max(100),
+  distribution: z.object({
+    easy: z.number().int().min(0).max(100),
+    medium: z.number().int().min(0).max(100),
+    hard: z.number().int().min(0).max(100),
+  }),
+});
+
+export const GenerationPlanSchema = z.object({
+  MCQ: TypeConfigSchema,
+  SHORT_ANSWER: TypeConfigSchema,
+  CALCULATION: TypeConfigSchema,
+  customInstructions: z.string().max(2000).optional(),
+});
+
 // ---------- Pagination ----------
 
 export const PaginationSchema = z.object({
@@ -260,4 +298,8 @@ export type StartAttemptInput = z.infer<typeof StartAttemptSchema>;
 export type SaveAnswerInput = z.infer<typeof SaveAnswerSchema>;
 export type SubmitAttemptInput = z.infer<typeof SubmitAttemptSchema>;
 export type CreateReportInput = z.infer<typeof CreateReportSchema>;
+export type LectureProposalInput = z.infer<typeof LectureProposalSchema>;
+export type LectureProposalsInput = z.infer<typeof LectureProposalsSchema>;
+export type ChatMessageInput = z.infer<typeof ChatMessageSchema>;
+export type GenerationPlanInput = z.infer<typeof GenerationPlanSchema>;
 export type PaginationInput = z.infer<typeof PaginationSchema>;

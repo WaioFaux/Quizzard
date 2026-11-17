@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { getAIHeaders } from "@/lib/ai/client-preferences";
 import {
   GenerationPlan,
   TypeConfig,
@@ -133,7 +134,7 @@ export function QBChatPanel({
       try {
         const res = await fetch(`/api/quizzes/${quizId}/chat`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getAIHeaders() },
           body: JSON.stringify({ action: "start", quizId }),
         });
         if (res.ok) {
@@ -216,7 +217,7 @@ export function QBChatPanel({
     try {
       const res = await fetch(`/api/quizzes/${quizId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({ action: "start", quizId }),
       });
       if (res.ok) {
@@ -296,7 +297,7 @@ export function QBChatPanel({
 
       const saveRes = await fetch(`/api/quizzes/${quizId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({ action: "savePlan", quizId, plan: planWithInstructions }),
       });
 
@@ -310,8 +311,13 @@ export function QBChatPanel({
       // Step 2: Trigger generation
       const genRes = await fetch(`/api/quizzes/${quizId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "generate", quizId }),
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
+        body: JSON.stringify({
+          action: "generate",
+          quizId,
+          // The client owns the plan - send it back with the request.
+          plan: planWithInstructions,
+        }),
       });
 
       const genData = await genRes.json();
@@ -361,7 +367,7 @@ export function QBChatPanel({
     try {
       await fetch(`/api/quizzes/${quizId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({ action: "end", quizId }),
       });
     } catch {

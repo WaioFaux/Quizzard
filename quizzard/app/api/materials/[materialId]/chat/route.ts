@@ -7,43 +7,35 @@ import {
   sendChatMessage,
   confirmLecturePlan,
   updateProposals,
-  endChatSession,
-  getChatSessionState,
 } from "@/lib/ai/chat.service";
+import { LectureProposalsSchema } from "@/lib/validation/schemas";
 import { logger } from "@/lib/utils/logger";
 
+// The AI round trip can take a while - give the function enough room to
+// finish and answer with a real error instead of being killed mid-flight.
+export const maxDuration = 60;
+
 /**
- * GET - Get current chat session state
+ * GET - Chat state is held by the client, so there is nothing to restore here.
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await requireTeacher();
-    const { searchParams } = new URL(req.url);
-    const materialId = searchParams.get("materialId");
+    await requireTeacher();
 
-    if (!materialId) {
-      throw new ValidationError("materialId query parameter is required");
-    }
-
-    const state = getChatSessionState(session.userId, materialId);
-
-    if (!state) {
-      return Response.json({ data: null, message: "No active chat session" });
-    }
-
-    return Response.json({ data: state });
+    return Response.json({
+      data: null,
+      message:
+        "No server-side chat session. The client keeps the lecture plan and sends it back with every request.",
+    });
   } catch (err) {
     console.error("[API /materials/[materialId]/chat] GET error:", err);
-    if (err instanceof Error) {
-      console.error("[API /materials/[materialId]/chat] Stack:", err.stack);
-    }
     return handleApiError(err);
   }
 }
 
 /**
  * POST - Start a new chat session or send a message
- * Body: { action: "start" | "message" | "confirm" | "update", message?: string, materialId: string, classId: string, proposals?: LectureProposal[] }
+ * Body: { action: "start" | "message" | "confirm" | "update" | "end", message?: string, materialId: string, classId?: string, proposals?: LectureProposal[] }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -74,7 +66,7 @@ export async function POST(req: NextRequest) {
         if (!classId) {
           throw new ValidationError("classId is required to start a chat session");
         }
-        result = await startChatSession(session.userId, classId, materialId);
+        result = await startChatSession(session.userId, classId, materialId, req.headers);
         logger.info("api.chat.start", {
           userId: session.userId,
           materialId,
@@ -87,7 +79,13 @@ export async function POST(req: NextRequest) {
         if (!message || typeof message !== "string") {
           throw new ValidationError("message is required for chat action");
         }
-        result = await sendChatMessage(session.userId, materialId, message);
+        result = await sendChatMessage(
+          session.userId,
+          materialId,
+          message,
+          parseProposals(proposals),
+          req.headers
+        );
         logger.info("api.chat.message", {
           userId: session.userId,
           materialId,
@@ -97,7 +95,12 @@ export async function POST(req: NextRequest) {
       }
 
       case "confirm": {
-        result = await confirmLecturePlan(session.userId, materialId);
+        result = await confirmLecturePlan(
+          session.userId,
+          materialId,
+          parseProposals(proposals, true),
+          req.headers
+        );
         logger.info("api.chat.confirm", {
           userId: session.userId,
           materialId,
@@ -107,24 +110,17 @@ export async function POST(req: NextRequest) {
       }
 
       case "update": {
-        if (!proposals || !Array.isArray(proposals)) {
-          throw new ValidationError("proposals array is required for update action");
-        }
-        result = await updateProposals(session.userId, materialId, proposals);
+        result = updateProposals(parseProposals(proposals, true));
         logger.info("api.chat.update", {
           userId: session.userId,
           materialId,
-          proposalCount: proposals.length,
+          proposalCount: result.proposals.length,
         });
         break;
       }
 
       case "end": {
-        endChatSession(session.userId, materialId);
-        logger.info("api.chat.end", {
-          userId: session.userId,
-          materialId,
-        });
+        // Nothing to clean up - the client owns the conversation state.
         return Response.json({ data: { success: true, message: "Chat session ended" } });
       }
 
@@ -140,4 +136,28 @@ export async function POST(req: NextRequest) {
     }
     return handleApiError(err);
   }
+}
+
+/**
+ * Validate the proposals sent by the client. They are untrusted input: the
+ * client owns the plan, the server must not accept anything malformed.
+ */
+function parseProposals(proposals: unknown, required = false) {
+  if (proposals === undefined || proposals === null) {
+    if (required) {
+      throw new ValidationError("proposals array is required for this action");
+    }
+    return [];
+  }
+
+  const parsed = LectureProposalsSchema.safeParse(proposals);
+
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    throw new ValidationError(
+      issue ? `${issue.path.join(".") || "proposals"}: ${issue.message}` : "Invalid proposals"
+    );
+  }
+
+  return parsed.data;
 }

@@ -33,6 +33,10 @@ import {
   type ModelOption,
   type AIProvider,
 } from "@/lib/ai/available-models";
+import {
+  MODEL_STORAGE_KEY,
+  PROVIDER_STORAGE_KEY,
+} from "@/lib/ai/client-preferences";
 import { useTheme } from "next-themes";
 import { Moon, Sun } from "lucide-react";
 
@@ -44,9 +48,6 @@ interface User {
   avatarUrl: string | null;
   createdAt: string;
 }
-
-const PROVIDER_STORAGE_KEY = "quizzard-ai-provider";
-const MODEL_STORAGE_KEY = "quizzard-ai-model";
 
 export default function SettingsPage() {
   const router = useRouter();

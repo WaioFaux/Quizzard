@@ -216,10 +216,11 @@ const GEMINI_MODELS: ModelOption[] = [
 export const OPENROUTER_MODELS = [...FREE_MODELS, ...OPENROUTER_AFFORDABLE, ...OPENROUTER_PREMIUM];
 export const ALL_MODELS = [...OPENROUTER_MODELS, ...GEMINI_MODELS];
 
-// Default model - OpenRouter is the primary provider because it is far more
-// reliable than the Gemini API, which frequently returns "503 - high demand".
-export const DEFAULT_MODEL = "baidu/ernie-5.5-flash-preview:free";
-export const DEFAULT_PROVIDER = "openrouter" as const;
+// Default model. Gemini is the primary provider - the model id is read from
+// GEMINI_MODEL in the environment - and the other provider is used as a
+// fallback whenever Gemini answers 503 (overloaded).
+export const DEFAULT_MODEL = "gemini-3.8-flash";
+export const DEFAULT_PROVIDER = "gemini" as const;
 
 // ============================================
 // HELPER FUNCTIONS

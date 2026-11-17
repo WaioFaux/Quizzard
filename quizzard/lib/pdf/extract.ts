@@ -16,7 +16,14 @@ export interface ExtractionResult {
  * functions where the local filesystem is not writable.
  */
 export async function extractTextFromPDFBuffer(buffer: Buffer): Promise<ExtractionResult> {
-  const parsed = await pdfParse(buffer);
+  // Copy the bytes into a standalone Uint8Array first. A Node Buffer is a
+  // view into a shared pool, so `buffer.buffer` may contain unrelated bytes
+  // before the start of the file. The bundled pdf.js reads the underlying
+  // ArrayBuffer and ignores the view offset, which corrupts the xref table
+  // and makes perfectly valid PDFs fail with "bad XRef entry".
+  const bytes = new Uint8Array(buffer);
+
+  const parsed = await pdfParse(bytes as unknown as Buffer);
 
   return {
     text: parsed.text,

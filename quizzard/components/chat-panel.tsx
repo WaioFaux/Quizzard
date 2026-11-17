@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getAIHeaders } from "@/lib/ai/client-preferences";
 
 interface LectureProposal {
   title: string;
@@ -71,7 +72,7 @@ export function ChatPanel({
     try {
       const response = await fetch(`/api/materials/${materialId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({
           action: "start",
           materialId,
@@ -120,11 +121,13 @@ export function ChatPanel({
     try {
       const response = await fetch(`/api/materials/${materialId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({
           action: "message",
           materialId,
           message: userMessage,
+          // The client owns the plan - the server has no session to read.
+          proposals: chatState?.proposals ?? [],
         }),
       });
 
@@ -164,10 +167,13 @@ export function ChatPanel({
     try {
       const response = await fetch(`/api/materials/${materialId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({
           action: "confirm",
           materialId,
+          // The plan lives in the client; send it back so the server can
+          // create the lectures.
+          proposals: chatState.proposals,
         }),
       });
 
@@ -210,7 +216,7 @@ export function ChatPanel({
     try {
       const response = await fetch(`/api/materials/${materialId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({
           action: "update",
           materialId,
@@ -252,7 +258,7 @@ export function ChatPanel({
     try {
       await fetch(`/api/materials/${materialId}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAIHeaders() },
         body: JSON.stringify({
           action: "end",
           materialId,

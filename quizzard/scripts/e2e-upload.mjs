@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 import { upload } from "@vercel/blob/client";
 
@@ -80,7 +80,7 @@ console.log("password fields leaked:", JSON.stringify(cls?.data).match(/classPas
 
 // ---- upload a REAL pdf with the real blob client ----
 const pdf = fs.readFileSync(
-  path.join(__dirname, "test-lecture.pdf")
+  path.join(import.meta.dirname, "test-lecture.pdf")
 );
 console.log("pdf bytes:", pdf.length);
 
@@ -164,3 +164,4 @@ if (mat?.data?.id) {
 }
 
 console.log("DONE");
+

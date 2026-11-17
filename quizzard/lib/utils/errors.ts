@@ -62,6 +62,15 @@ export class QuizNotPublishedError extends AppError {
   }
 }
 
+export class AIProviderError extends AppError {
+  constructor(
+    message = "The AI service is temporarily unavailable. Please try again in a moment."
+  ) {
+    super(message, "AI_UNAVAILABLE", 503);
+    this.name = "AIProviderError";
+  }
+}
+
 export class IllegalTransitionError extends AppError {
   constructor(entity: string, from: string, to: string) {
     super(
