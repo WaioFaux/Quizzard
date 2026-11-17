@@ -6,6 +6,16 @@ import bcrypt from "bcryptjs";
 
 const CLASS_PASSWORD_SALT_ROUNDS = 12;
 
+/**
+ * Never expose the class password (plaintext or hashed) to API clients.
+ * Prisma 6 supports `omit` on queries, which removes the columns from the
+ * result instead of relying on manual redaction at each call site.
+ */
+const CLASS_PASSWORD_OMIT = {
+  classPassword: true,
+  classPasswordHash: true,
+} as const;
+
 function generateClassCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -41,6 +51,7 @@ export async function createClass(
       classPasswordHash,
       teacherId,
     },
+    omit: CLASS_PASSWORD_OMIT,
     include: {
       teacher: {
         select: { id: true, name: true, email: true },
@@ -57,6 +68,7 @@ export async function createClass(
 export async function getClassById(classId: string, userId: string, userRole: Role) {
   const cls = await prisma.class.findUnique({
     where: { id: classId },
+    omit: CLASS_PASSWORD_OMIT,
     include: {
       teacher: {
         select: { id: true, name: true, email: true },
@@ -123,6 +135,7 @@ export async function getClassById(classId: string, userId: string, userRole: Ro
 export async function listTeacherClasses(teacherId: string) {
   return prisma.class.findMany({
     where: { teacherId },
+    omit: CLASS_PASSWORD_OMIT,
     include: {
       _count: {
         select: { enrollments: true, lectures: true },
@@ -137,6 +150,7 @@ export async function listStudentEnrollments(studentId: string) {
     where: { studentId },
     include: {
       class: {
+        omit: CLASS_PASSWORD_OMIT,
         include: {
           teacher: {
             select: { id: true, name: true },
@@ -191,6 +205,7 @@ export async function updateClass(
 
   return prisma.class.update({
     where: { id: classId },
+    omit: CLASS_PASSWORD_OMIT,
     data: {
       name: input.name ?? cls.name,
       description: input.description !== undefined ? input.description : cls.description,

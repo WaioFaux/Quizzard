@@ -22,51 +22,35 @@ export interface ModelOption {
 // Free models from OpenRouter
 const FREE_MODELS: ModelOption[] = [
   {
-    id: "inclusionai/ling-3.0-flash-vl:free",
-    name: "Ling 3.0 Flash VL",
+    id: "baidu/ernie-5.5-flash-preview:free",
+    name: "ERNIE 5.5 Flash Preview",
     provider: "openrouter",
-    description: "Fast with vision support. Good all-rounder for text and image tasks.",
+    description: "Fast and reliable. Good default for structured question generation.",
     contextLength: 262144,
     isFree: true,
   },
   {
-    id: "nex-agi/nex-n2.5-mini:free",
-    name: "Nex-N2.5-Mini",
+    id: "recursive/flint-v1.0:free",
+    name: "Flint v1.0",
     provider: "openrouter",
-    description: "Lightweight agentic model. Good for coding and text tasks.",
+    description: "Lightweight open model that answers quickly.",
     contextLength: 262144,
     isFree: true,
   },
   {
-    id: "nex-agi/nex-n2.5-pro:free",
-    name: "Nex-N2.5-Pro",
+    id: "particle-ai/particle-1:free",
+    name: "Particle 1",
     provider: "openrouter",
-    description: "Higher quality agentic model. Better reasoning and analysis.",
+    description: "Fast general-purpose open model.",
     contextLength: 262144,
     isFree: true,
   },
   {
-    id: "inclusionai/ling-3.0-flash-sante:free",
-    name: "Ling 3.0 Flash Sante",
+    id: "nvidia/nemotron-3.5-lightning:free",
+    name: "Nemotron 3.5 Lightning",
     provider: "openrouter",
-    description: "Health and medicine-focused model. Specialized for medical content.",
+    description: "NVIDIA open model with strong reasoning for the price of a free tier.",
     contextLength: 262144,
-    isFree: true,
-  },
-  {
-    id: "qwen/qwen3.0-7b-instruct:free",
-    name: "Qwen 3.0 7B Instruct",
-    provider: "openrouter",
-    description: "Open-source model with strong multilingual capabilities.",
-    contextLength: 32768,
-    isFree: true,
-  },
-  {
-    id: "meta-llama/llama-3.3-70b-instruct:free",
-    name: "Llama 3.3 70B Instruct",
-    provider: "openrouter",
-    description: "Large open model from Meta. Excellent reasoning.",
-    contextLength: 128000,
     isFree: true,
   },
 ];
@@ -189,17 +173,10 @@ const OPENROUTER_PREMIUM: ModelOption[] = [
 
 const GEMINI_MODELS: ModelOption[] = [
   {
-    id: "gemini-3.6-flash",
-    name: "Gemini 3.6 Flash",
+    id: "gemini-3.8-flash",
+    name: "Gemini 3.8 Flash",
     provider: "gemini",
-    description: "Latest Gemini model. Fast with excellent reasoning capabilities.",
-    contextLength: 1048576,
-  },
-  {
-    id: "gemini-3.6-flash-exp",
-    name: "Gemini 3.6 Flash Experimental",
-    provider: "gemini",
-    description: "Experimental version with latest features.",
+    description: "Latest stable Gemini model. Fast with excellent reasoning capabilities.",
     contextLength: 1048576,
   },
   {
@@ -207,13 +184,6 @@ const GEMINI_MODELS: ModelOption[] = [
     name: "Gemini 3.5 Flash",
     provider: "gemini",
     description: "Enhanced capabilities with improved reasoning.",
-    contextLength: 1048576,
-  },
-  {
-    id: "gemini-3.0-flash",
-    name: "Gemini 3.0 Flash",
-    provider: "gemini",
-    description: "Latest fast model with best-in-class performance.",
     contextLength: 1048576,
   },
   {
@@ -231,17 +201,10 @@ const GEMINI_MODELS: ModelOption[] = [
     contextLength: 1048576,
   },
   {
-    id: "gemini-3.6-pro",
-    name: "Gemini 3.6 Pro",
+    id: "gemini-3.8-pro",
+    name: "Gemini 3.8 Pro",
     provider: "gemini",
     description: "Most capable Gemini model for complex tasks.",
-    contextLength: 1048576,
-  },
-  {
-    id: "gemini-3.5-pro",
-    name: "Gemini 3.5 Pro",
-    provider: "gemini",
-    description: "Enhanced Gemini model with improved reasoning.",
     contextLength: 1048576,
   },
 ];
@@ -253,9 +216,10 @@ const GEMINI_MODELS: ModelOption[] = [
 export const OPENROUTER_MODELS = [...FREE_MODELS, ...OPENROUTER_AFFORDABLE, ...OPENROUTER_PREMIUM];
 export const ALL_MODELS = [...OPENROUTER_MODELS, ...GEMINI_MODELS];
 
-// Default model - use Gemini 3.6 Flash as the default
-export const DEFAULT_MODEL = "gemini-3.6-flash";
-export const DEFAULT_PROVIDER = "gemini" as const;
+// Default model - OpenRouter is the primary provider because it is far more
+// reliable than the Gemini API, which frequently returns "503 - high demand".
+export const DEFAULT_MODEL = "baidu/ernie-5.5-flash-preview:free";
+export const DEFAULT_PROVIDER = "openrouter" as const;
 
 // ============================================
 // HELPER FUNCTIONS

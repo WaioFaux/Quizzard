@@ -14,11 +14,17 @@ export const config = {
   },
   openrouter: {
     apiKey: optional("OPENROUTER_API_KEY"),
-    defaultModel: optional("OPENROUTER_DEFAULT_MODEL") ?? "deepseek/deepseek-v4.1-flash",
+    defaultModel: optional("OPENROUTER_DEFAULT_MODEL") ?? "baidu/ernie-5.5-flash-preview:free",
   },
   gemini: {
     apiKey: optional("GEMINI_API_KEY"),
-    model: optional("GEMINI_MODEL") ?? "gemini-3.6-flash",
+    model: optional("GEMINI_MODEL") ?? "gemini-3.8-flash",
+  },
+  ai: {
+    // Hard ceiling for a single provider call. Serverless functions have a
+    // fixed wall-clock budget, so a provider that never answers must not be
+    // allowed to consume all of it.
+    requestTimeoutMs: parseInt(optional("AI_REQUEST_TIMEOUT_MS") ?? "45000", 10),
   },
   app: {
     url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",

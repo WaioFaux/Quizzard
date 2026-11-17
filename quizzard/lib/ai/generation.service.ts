@@ -83,8 +83,18 @@ export async function generateQuestionBank(
   );
 
   const createdQuestions = [];
-  for (const question of result.questions) {
-    const recheck = await blindRecheck(question);
+
+  // The blind recheck is an independent AI call per question. Running them
+  // sequentially would multiply the provider latency by the number of
+  // questions and can blow the serverless function budget, so they run
+  // concurrently instead.
+  const recheckResults = await Promise.all(
+    result.questions.map((question) => blindRecheck(question))
+  );
+
+  for (let i = 0; i < result.questions.length; i++) {
+    const question = result.questions[i];
+    const recheck = recheckResults[i];
     const status: QuestionStatus = recheck.flagged
       ? QuestionStatus.FLAGGED_FOR_REVIEW
       : QuestionStatus.DRAFT;

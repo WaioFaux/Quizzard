@@ -1,5 +1,6 @@
 import { config } from "../config";
 import type { QuestionType } from "@prisma/client";
+import { callAIForJSON } from "./ai-client";
 import {
   generateQuestionsPrompt,
   recheckQuestionPrompt,
@@ -69,7 +70,8 @@ interface GeminiError {
 export async function callGeminiForJSON<T>(
   prompt: string,
   retries: number = 3,
-  retryDelayMs: number = 1000
+  retryDelayMs: number = 1000,
+  timeoutMs: number = config.ai.requestTimeoutMs
 ): Promise<T> {
   const { apiKey, model } = config.gemini;
 
@@ -119,6 +121,9 @@ export async function callGeminiForJSON<T>(
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
+        // A provider that stops responding must not consume the whole
+        // serverless function budget - abort and fall through to the retry.
+        signal: AbortSignal.timeout(timeoutMs),
       });
 
       console.log(`${LOG_PREFIX} [API_RESPONSE] Received response from Gemini`, {
@@ -371,7 +376,9 @@ export async function generateQuestions(
       materialText,
     });
 
-    const rawQuestions = await callGeminiForJSON<GeneratedPrompt[]>(prompt);
+    // Three attempts at most (45s timeout each) so the worst case stays
+    // inside the serverless function budget.
+    const rawQuestions = await callGeminiForJSON<GeneratedPrompt[]>(prompt, 2);
 
     if (!Array.isArray(rawQuestions)) {
       throw new Error("Gemini returned non-array response");
@@ -405,6 +412,64 @@ export async function generateQuestions(
     };
   } catch (error) {
     errors.push(`Gemini API error: ${error instanceof Error ? error.message : String(error)}`);
+
+    // Gemini can be temporarily unavailable ("503 - high demand"). When
+    // OpenRouter is configured, try it before falling back to mock questions.
+    if (questions.length === 0 && isOpenRouterConfigured()) {
+      try {
+        const types = getQuestionTypeMix(count, questionTypes);
+        const typeList = [...new Set(types)];
+
+        const prompt = generateQuestionsPrompt({
+          topic: instructions,
+          count,
+          questionTypes: typeList,
+          difficulty: difficulty ?? "medium",
+          materialText,
+        });
+
+        const rawQuestions = await callAIForJSON<GeneratedPrompt[]>(prompt, {
+          provider: "openrouter",
+          model: config.openrouter.defaultModel,
+        });
+
+        if (!Array.isArray(rawQuestions)) {
+          throw new Error("OpenRouter returned non-array response");
+        }
+
+        for (let i = 0; i < rawQuestions.length; i++) {
+          try {
+            const question = validateAndTransformQuestion(rawQuestions[i]);
+
+            if (question.type === "CALCULATION") {
+              questions.push({
+                ...question,
+                promptTemplate: substituteVariables(
+                  question.promptTemplate,
+                  question.variables
+                ),
+              });
+            } else {
+              questions.push(question);
+            }
+          } catch (validationError) {
+            errors.push(
+              `Question ${i + 1}: ${validationError instanceof Error ? validationError.message : String(validationError)}`
+            );
+          }
+        }
+
+        return {
+          questions,
+          usedFallback: false,
+          errors: errors.length > 0 ? errors : undefined,
+        };
+      } catch (fallbackError) {
+        errors.push(
+          `OpenRouter API error: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`
+        );
+      }
+    }
 
     if (questions.length === 0) {
       return generateMockQuestions(count, questionTypes);
@@ -530,8 +595,8 @@ export async function blindRecheck(
     timestamp: new Date().toISOString(),
   });
 
-  if (!isGeminiConfigured()) {
-    console.warn(`${LOG_PREFIX} [RECHECK_SKIP] Gemini not configured, using random fallback`, {
+  if (!isGeminiConfigured() && !isOpenRouterConfigured()) {
+    console.warn(`${LOG_PREFIX} [RECHECK_SKIP] No AI provider configured, using random fallback`, {
       timestamp: new Date().toISOString(),
     });
     if (Math.random() < 0.05) {
@@ -552,7 +617,10 @@ export async function blindRecheck(
     });
 
     const prompt = recheckQuestionPrompt(question);
-    const result = await callGeminiForJSON<RecheckResult>(prompt);
+    // The recheck is advisory - it flags a question for human review. It must
+    // never be the reason a generation request runs out of time, so it gets a
+    // single attempt and a short timeout.
+    const result = await callGeminiForJSON<RecheckResult>(prompt, 0, 1000, 15000);
 
     console.log(`${LOG_PREFIX} [RECHECK_COMPLETE] Recheck finished`, {
       flagged: result.flagged,
@@ -565,10 +633,29 @@ export async function blindRecheck(
       reason: result.reason,
     };
   } catch (error) {
-    console.error(`${LOG_PREFIX} [RECHECK_ERROR] Recheck failed, defaulting to no flag`, {
+    console.error(`${LOG_PREFIX} [RECHECK_ERROR] Recheck failed via Gemini, defaulting to no flag`, {
       error: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString(),
     });
+
+    // Gemini may be unavailable - OpenRouter is the secondary provider.
+    if (isOpenRouterConfigured()) {
+      try {
+        const prompt = recheckQuestionPrompt(question);
+        const result = await callAIForJSON<RecheckResult>(
+          prompt,
+          { provider: "openrouter", model: config.openrouter.defaultModel },
+          0
+        );
+        return { flagged: result.flagged, reason: result.reason };
+      } catch (fallbackError) {
+        console.error(`${LOG_PREFIX} [RECHECK_ERROR] Recheck failed via OpenRouter too`, {
+          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+
     return { flagged: false };
   }
 }
@@ -576,8 +663,8 @@ export async function blindRecheck(
 export async function proposeLectures(
   materialText: string
 ): Promise<Array<{ title: string; startPage: number; endPage: number }>> {
-  if (!isGeminiConfigured()) {
-    console.warn(`${LOG_PREFIX} Gemini not configured, using mock lectures`);
+  if (!isGeminiConfigured() && !isOpenRouterConfigured()) {
+    console.warn(`${LOG_PREFIX} No AI provider configured, using mock lectures`);
     return generateMockLectures();
   }
 
@@ -594,10 +681,27 @@ export async function proposeLectures(
     });
     return result;
   } catch (error) {
-    console.error(`${LOG_PREFIX} Lecture proposal failed:`, error);
+    console.error(`${LOG_PREFIX} Lecture proposal failed via Gemini:`, error);
     if (error instanceof Error) {
       console.error(`${LOG_PREFIX} Stack:`, error.stack);
     }
+
+    // Fall back to OpenRouter when Gemini is unavailable.
+    if (isOpenRouterConfigured()) {
+      try {
+        const prompt = proposeLecturesPrompt(materialText);
+        const result = await callAIForJSON<
+          Array<{ title: string; startPage: number; endPage: number }>
+        >(prompt, {
+          provider: "openrouter",
+          model: config.openrouter.defaultModel,
+        });
+        return result;
+      } catch (fallbackError) {
+        console.error(`${LOG_PREFIX} Lecture proposal failed via OpenRouter:`, fallbackError);
+      }
+    }
+
     return generateMockLectures();
   }
 }
@@ -613,6 +717,14 @@ function generateMockLectures(): Array<{ title: string; startPage: number; endPa
 export function isGeminiConfigured(): boolean {
   try {
     return Boolean(config.gemini.apiKey);
+  } catch {
+    return false;
+  }
+}
+
+export function isOpenRouterConfigured(): boolean {
+  try {
+    return Boolean(config.openrouter.apiKey);
   } catch {
     return false;
   }

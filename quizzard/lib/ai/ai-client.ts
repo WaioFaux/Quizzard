@@ -159,6 +159,9 @@ async function callOpenRouter<T>(
       temperature,
       max_tokens: maxTokens,
     }),
+    // Abort a provider that stops responding so the retry loop can take over
+    // instead of the request hanging until the function is killed.
+    signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
   });
 
   if (!response.ok) {
@@ -213,6 +216,9 @@ async function callGemini<T>(
         maxOutputTokens: maxTokens,
       },
     }),
+    // Abort a provider that stops responding so the retry loop can take over
+    // instead of the request hanging until the function is killed.
+    signal: AbortSignal.timeout(config.ai.requestTimeoutMs),
   });
 
   if (!response.ok) {
