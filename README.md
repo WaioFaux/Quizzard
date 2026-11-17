@@ -8,13 +8,15 @@ Quiz platform where teachers use AI to generate question banks from course mater
 |---|---|
 | Framework | Next.js 16 (App Router) |
 | Language | TypeScript 5 |
-| Database | SQLite (dev) / PostgreSQL (prod) via Prisma ORM |
+| Database | PostgreSQL (Neon) via Prisma ORM |
 | Auth | iron-session (cookie-based) |
 | AI | Google Gemini API (via `@google/generative-ai`) |
 | UI | shadcn/ui + Tailwind CSS 4 |
+| File Storage | Vercel Blob (public store) |
 | PDF Processing | `pdf-parse` |
 | Math Evaluation | `mathjs` |
 | Rate Limiting | In-memory (per-user + per-IP) |
+| Hosting | Vercel (Hobby) |
 
 ## Features
 
@@ -41,6 +43,8 @@ Quiz platform where teachers use AI to generate question banks from course mater
 
 - Node.js 20+
 - npm 9+
+- A Neon PostgreSQL project (or any Postgres database)
+- A Vercel Blob store
 - A Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ## Setup
@@ -54,11 +58,12 @@ npm install
 
 # 3. Configure environment variables
 cp .env.example .env.local
-# Edit .env.local and fill in your SESSION_SECRET and GEMINI_API_KEY
+# Edit .env.local and fill in DATABASE_URL, DIRECT_URL, SESSION_SECRET,
+# BLOB_READ_WRITE_TOKEN and GEMINI_API_KEY
 
 # 4. Set up the database
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 
 # 5. Start the dev server
 npm run dev
@@ -70,14 +75,15 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | Yes | SQLite: `file:./dev.db` · PostgreSQL: `postgresql://...` |
+| `DATABASE_URL` | Yes | Pooled PostgreSQL URL used at runtime, e.g. `postgresql://...?pgbouncer=true&connection_limit=1` |
+| `DIRECT_URL` | Yes | Direct (unpooled) PostgreSQL URL used by Prisma for migrations |
 | `SESSION_SECRET` | Yes | Random string, minimum 32 characters. Generate with `openssl rand -base64 32` |
 | `GEMINI_API_KEY` | Yes | Key from Google AI Studio |
 | `GEMINI_MODEL` | No | Gemini model id (default: `gemini-3.6-flash`) |
 | `OPENROUTER_API_KEY` | No | Alternative AI provider |
 | `OPENROUTER_DEFAULT_MODEL` | No | OpenRouter model id |
 | `NEXT_PUBLIC_APP_URL` | No | App URL for CORS/cookies (default: `http://localhost:3000`) |
-| `FILE_STORAGE_PATH` | No | Uploaded file storage path (default: `./public/uploads`) |
+| `BLOB_READ_WRITE_TOKEN` | Yes | Vercel Blob read-write token (PDF materials and avatars) |
 
 ## Scripts
 
@@ -91,6 +97,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run test:run` | Run tests once |
 | `npm run db:push` | Push schema changes to the database |
 | `npm run db:migrate` | Create and apply a database migration |
+| `npm run db:deploy` | Apply pending migrations (used against Neon) |
 | `npm run db:studio` | Open Prisma Studio to browse the database |
 
 ## Documentation

@@ -1,14 +1,13 @@
-import path from "path";
-import fs from "fs/promises";
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError, ValidationError } from "../utils/errors";
-import { extractTextFromPDF, truncateText } from "../pdf/extract";
+import { extractTextFromPDFBuffer, truncateText } from "../pdf/extract";
 import { logger } from "../utils/logger";
-
-const UPLOAD_DIR = process.env.FILE_STORAGE_PATH ?? "./public/uploads";
-
-// Max file size: 50 MB
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024;
+import {
+  MAX_MATERIAL_BYTES,
+  deleteBlob,
+  downloadBlob,
+  getBlobInfo,
+} from "../storage/blob";
 
 // PDF magic bytes (file signature)
 const PDF_MAGIC_BYTES = Buffer.from("%PDF-", "ascii");
@@ -23,10 +22,17 @@ function validatePdfMagicBytes(buffer: Buffer): void {
   }
 }
 
-export async function uploadMaterial(
+/**
+ * Creates a material record for a PDF that was uploaded straight to the blob
+ * store by the browser, then extracts its text.
+ *
+ * The extraction runs inline (not in the background) because a serverless
+ * function is frozen as soon as the response is sent.
+ */
+export async function createMaterialFromBlob(
   classId: string,
   teacherId: string,
-  file: { filename: string; data: Buffer }
+  file: { filename: string; url: string }
 ) {
   // Verify class ownership
   const cls = await prisma.class.findUnique({ where: { id: classId } });
@@ -37,79 +43,62 @@ export async function uploadMaterial(
     throw new AuthorizationError("You do not own this class");
   }
 
-  // Enforce file size limit
-  if (file.data.length > MAX_FILE_SIZE_BYTES) {
+  if (!file.url || !file.url.startsWith("https://")) {
+    throw new ValidationError("A valid upload URL is required");
+  }
+
+  // Enforce file size limit using the blob metadata (no download yet)
+  const info = await getBlobInfo(file.url);
+  if (info.size > MAX_MATERIAL_BYTES) {
+    await deleteBlob(info.url);
     throw new ValidationError("File exceeds maximum size of 50 MB");
   }
 
+  const buffer = await downloadBlob(info.url);
+
   // Validate magic bytes to ensure the file is actually a PDF
-  validatePdfMagicBytes(file.data);
-
-  // Validate extension is .pdf
-  const ext = path.extname(file.filename).toLowerCase();
-  if (ext !== ".pdf") {
-    throw new ValidationError("Only PDF files are allowed");
+  try {
+    validatePdfMagicBytes(buffer);
+  } catch (error) {
+    await deleteBlob(info.url);
+    throw error;
   }
-
-  // Ensure upload directory exists
-  const uploadDir = path.resolve(UPLOAD_DIR);
-  await fs.mkdir(uploadDir, { recursive: true });
-
-  // Generate unique filename
-  const safeExt = ".pdf"; // Always use .pdf since we validated the content above
-  const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`;
-  const filePath = path.join(uploadDir, uniqueName);
-  const publicPath = `/uploads/${uniqueName}`;
-
-  // Write file
-  await fs.writeFile(filePath, file.data);
 
   // Create material record with PROCESSING status
   const material = await prisma.material.create({
     data: {
       fileName: file.filename,
-      filePath: publicPath,
+      filePath: info.url,
       classId,
       status: "PROCESSING",
     },
   });
 
-  // Extract just the filename for the processing function
-  const filename = path.basename(publicPath);
+  // Process the PDF inline so the status is final by the time we respond
+  const processed = await processMaterial(material.id, info.url);
 
-  // Process PDF in background (don't await to avoid blocking the response)
-  processMaterialAsync(material.id, filename).catch((error) => {
-    console.error(`Failed to process material ${material.id}:`, error);
-  });
-
-  return material;
+  return processed ?? material;
 }
 
-async function processMaterialAsync(materialId: string, filename: string) {
+/**
+ * Extracts the text of a stored PDF and updates the material status.
+ * Returns the updated material, or null when the material disappeared.
+ */
+export async function processMaterial(materialId: string, url: string) {
   const startTime = Date.now();
 
   try {
-    // Resolve the full path before extraction
-    const uploadDir = path.resolve(UPLOAD_DIR);
-    const absolutePath = path.join(uploadDir, filename);
-
-    logger.info("material.processing.start", {
-      materialId,
-      filename,
-      absolutePath,
-    });
-
-    // Extract text from PDF
-    const extraction = await extractTextFromPDF(absolutePath);
+    const buffer = await downloadBlob(url);
+    const extraction = await extractTextFromPDFBuffer(buffer);
     const truncatedText = truncateText(extraction.text);
 
-    // Validate extracted text is not empty
     if (!truncatedText || truncatedText.trim().length === 0) {
-      throw new Error("PDF extracted text is empty - the file may be scanned/image-based or corrupted");
+      throw new Error(
+        "PDF extracted text is empty - the file may be scanned/image-based or corrupted"
+      );
     }
 
-    // Update material with extracted text
-    await prisma.material.update({
+    const material = await prisma.material.update({
       where: { id: materialId },
       data: {
         status: "PROCESSED",
@@ -123,16 +112,17 @@ async function processMaterialAsync(materialId: string, filename: string) {
       pageCount: extraction.pageCount,
       duration_ms: Date.now() - startTime,
     });
+
+    return material;
   } catch (error) {
     logger.error("material.processing.failed", {
       materialId,
       error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
       duration_ms: Date.now() - startTime,
     });
 
     // Mark as failed
-    await prisma.material.update({
+    return prisma.material.update({
       where: { id: materialId },
       data: {
         status: "FAILED",
@@ -184,16 +174,8 @@ export async function deleteMaterial(materialId: string, teacherId: string) {
     throw new AuthorizationError("You do not own this material");
   }
 
-  // Delete file from disk
-  const filePath = path.resolve(
-    process.env.FILE_STORAGE_PATH ?? "./public/uploads",
-    path.basename(material.filePath)
-  );
-  try {
-    await fs.unlink(filePath);
-  } catch {
-    // File may not exist, continue
-  }
+  // Delete the file from the blob store
+  await deleteBlob(material.filePath);
 
   await prisma.material.delete({ where: { id: materialId } });
 }
@@ -236,10 +218,8 @@ export async function reprocessMaterial(materialId: string, teacherId: string) {
     data: { status: "PROCESSING", extractedText: null },
   });
 
-  // Process in background
-  processMaterialAsync(materialId, path.basename(material.filePath)).catch((error) => {
-    console.error(`Failed to reprocess material ${materialId}:`, error);
-  });
+  // Process inline
+  const updated = await processMaterial(materialId, material.filePath);
 
-  return prisma.material.findUnique({ where: { id: materialId } });
+  return updated ?? prisma.material.findUnique({ where: { id: materialId } });
 }

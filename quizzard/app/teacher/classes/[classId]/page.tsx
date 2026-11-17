@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ChatPanel } from "@/components/chat-panel";
+import { upload } from "@vercel/blob/client";
+import { buildBlobPathname } from "@/lib/storage/blob-paths";
 
 interface Material {
   id: string;
@@ -188,13 +190,24 @@ export default function TeacherClassDashboardPage({
     }
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("classId", classId);
+      // Upload straight to the blob store from the browser: the serverless
+      // request body limit is 4.5 MB, materials may be up to 50 MB.
+      const pathname = buildBlobPathname("materials", file.name);
+      const blob = await upload(pathname, file, {
+        access: "public",
+        handleUploadUrl: "/api/materials/upload",
+        clientPayload: JSON.stringify({ classId }),
+        contentType: "application/pdf",
+      });
 
       const res = await fetch("/api/materials", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          classId,
+          fileName: file.name,
+          url: blob.url,
+        }),
       });
 
       if (!res.ok) {

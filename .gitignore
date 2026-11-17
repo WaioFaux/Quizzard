@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# Stray nested git repository (not part of this project)
+/Quizzard_vercel/

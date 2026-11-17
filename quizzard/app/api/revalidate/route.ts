@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (tag) {
-      revalidateTag(tag);
+      revalidateTag(tag, "max");
     }
 
     return Response.json({

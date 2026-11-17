@@ -25,7 +25,11 @@ export const config = {
     nodeEnv: process.env.NODE_ENV ?? "development",
   },
   fileStorage: {
-    path: process.env.FILE_STORAGE_PATH ?? "./public/uploads",
+    // Uploads are stored in Vercel Blob; the local filesystem is not writable
+    // on serverless deployments.
+    provider: "vercel-blob" as const,
+    maxMaterialBytes: 50 * 1024 * 1024,
+    maxAvatarBytes: 2 * 1024 * 1024,
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS ?? "60000", 10),

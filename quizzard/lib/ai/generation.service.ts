@@ -5,7 +5,6 @@ import {
   blindRecheck,
   type GeneratedQuestion,
 } from "./gemini-client";
-import { createQuiz } from "./quiz.service";
 import { createQuestion } from "../services/question-bank.service";
 import { NotFoundError, AuthorizationError } from "../utils/errors";
 import { QuestionStatus, QuizStatus } from "@prisma/client";

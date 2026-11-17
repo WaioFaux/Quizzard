@@ -10,14 +10,15 @@ This document covers deployment, infrastructure, database design, monitoring, an
 |---|---|
 | Framework | Next.js 16 App Router |
 | Language | TypeScript 5 |
-| Database | SQLite (dev) → PostgreSQL (prod) via Prisma ORM |
+| Database | PostgreSQL (Neon) via Prisma ORM |
 | Auth | iron-session (cookie-based) |
 | AI | Google Gemini API (`@google/generative-ai`) |
 | UI | shadcn/ui + Tailwind CSS 4 |
+| File Storage | Vercel Blob (public store) |
 | PDF Processing | `pdftotext` (poppler-utils) + `pdfplumber` |
 | Math Evaluation | `mathjs` |
 | Rate Limiting | `rate-limit` (in-memory, MVP) |
-| Deployment Target | Vercel (recommended) or Node.js server |
+| Deployment Target | Vercel Hobby + Neon Postgres |
 
 **No substitutions**: The stack is locked. Do not introduce alternative databases, auth libraries, or AI providers without explicit instruction.
 
@@ -28,9 +29,9 @@ This document covers deployment, infrastructure, database design, monitoring, an
 ### 2.1 Required Env Vars
 
 ```env
-# Database
-DATABASE_URL="file:./dev.db"                    # SQLite dev
-# DATABASE_URL="postgresql://user:pass@host/db" # PostgreSQL prod
+# Database — Neon PostgreSQL
+DATABASE_URL="postgresql://user:pass@host/db?sslmode=require&pgbouncer=true&connection_limit=1"  # Pooled, used at runtime
+DIRECT_URL="postgresql://user:pass@host/db?sslmode=require"                                     # Direct, used by migrations
 
 # Session
 SESSION_SECRET="min-32-char-random-string-here"  # Generate with: openssl rand -base64 32
@@ -45,8 +46,8 @@ OPENROUTER_DEFAULT_MODEL="deepseek/deepseek-v4.1-flash"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"   # For CORS / cookies
 NODE_ENV="development"
 
-# File Storage
-FILE_STORAGE_PATH="./public/uploads"           # Relative to quizzard/ root
+# File Storage — Vercel Blob
+BLOB_READ_WRITE_TOKEN="vercel_blob_rw_..."    # PDF materials + avatars
 ```
 
 ### 2.2 Optional Env Vars
@@ -660,19 +661,49 @@ export async function getClass(classId: string, teacherId: string) {
 
 ### 11.1 Vercel (Recommended)
 
+The app is deployed from the GitHub repository with **Root Directory = `quizzard`**.
+
 ```bash
-# Install Vercel CLI
-npm i -g vercel
-
-# Deploy
+# 1. Database - create a Neon project and link it to the app
 cd quizzard
-vercel
+npm i -g neon@latest
+neon login
+neon init -y --agent cursor --region-id <region-id> --project-name Quizzard_vercel
+# -> writes DATABASE_URL and DATABASE_URL_UNPOOLED into quizzard/.env
 
-# Set env vars in Vercel dashboard:
-# SESSION_SECRET, GEMINI_API_KEY, DATABASE_URL, NEXT_PUBLIC_APP_URL
+# 2. Apply the schema to Postgres
+npx prisma generate
+npx prisma migrate deploy
+
+# 3. Import the repo in the Vercel dashboard
+#    Add New -> Project -> import <github-repo>
+#    Root Directory: quizzard   |   Framework preset: Next.js
+
+# 4. Environment variables (Vercel dashboard, Production + Preview)
+#    DATABASE_URL        Neon pooled URL  (?pgbouncer=true&connection_limit=1)
+#    DIRECT_URL          Neon direct URL  (migrations only)
+#    SESSION_SECRET      >= 32 characters, same value as local
+#    GEMINI_API_KEY / OPENROUTER_API_KEY (+ model ids)
+#    NEXT_PUBLIC_APP_URL https://<project>.vercel.app
+#    BLOB_READ_WRITE_TOKEN  (from the Blob store attached to the project)
+
+# 5. Attach a Blob store
+#    Storage -> Blob -> Create -> the token is added to the project env vars
 ```
 
-**Database note for Vercel**: Use Prisma Accelerate or a managed PostgreSQL (Neon, Supabase, Railway). SQLite on Vercel is not recommended for production because the filesystem is ephemeral.
+**File uploads**: course materials (up to 50 MB) are uploaded by the browser straight to
+Vercel Blob through a client token issued by `POST /api/materials/upload`. A serverless
+request body is capped at 4.5 MB, so the PDF never passes through an API route. The API
+then downloads the blob, extracts the text with `pdf-parse` and stores the blob URL in
+`Material.filePath`.
+
+**Database note for Vercel**: SQLite is not used in production - the filesystem of a
+serverless function is ephemeral. Use a managed PostgreSQL (Neon, Supabase, Railway).
+Migrations run with `prisma migrate deploy` against `DIRECT_URL`.
+
+**Hobby tier caveats**: function duration is capped (the material upload route asks for
+`maxDuration = 300`), rate limiting is in-memory per function instance, and there are no
+cron jobs - which is why PDF text extraction runs inline instead of in the background.
 
 ### 11.2 Self-Hosted (Node.js)
 
@@ -709,7 +740,10 @@ module.exports = {
 | `NODE_ENV` | `development` | `production` |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | Your domain |
 | `SESSION_SECRET` | Dev secret (32+ chars) | Generate cryptographically random |
-| `DATABASE_URL` | SQLite file | PostgreSQL connection string |
+| `DATABASE_URL` | Neon pooled URL | Neon pooled URL |
+| `DIRECT_URL` | Neon direct URL | Neon direct URL |
+| `BLOB_READ_WRITE_TOKEN` | Local Blob store token | Blob store attached to the project |
+| File storage | Vercel Blob | Vercel Blob |
 | Rate limiting | Disabled or relaxed | Enabled |
 
 ---

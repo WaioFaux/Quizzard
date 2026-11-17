@@ -1,8 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireTeacher } from "@/lib/middleware/auth";
 import { handleApiError } from "@/lib/utils/error-handler";
-import { prisma } from "@/lib/db";
-import { NotFoundError, AuthorizationError } from "@/lib/utils/errors";
+import { deleteMaterial } from "@/lib/services/material.service";
 import { logger } from "@/lib/utils/logger";
 
 export async function DELETE(
@@ -13,32 +12,8 @@ export async function DELETE(
     const { materialId } = await params;
     const session = await requireTeacher();
 
-    const material = await prisma.material.findUnique({
-      where: { id: materialId },
-      include: {
-        class: { select: { teacherId: true } },
-      },
-    });
-
-    if (!material) {
-      throw new NotFoundError("Material");
-    }
-
-    if (material.class.teacherId !== session.userId) {
-      throw new AuthorizationError("You do not own this material");
-    }
-
-    // Delete the file from storage if it exists
-    if (material.filePath) {
-      try {
-        const { unlink } = await import("fs/promises");
-        await unlink(material.filePath);
-      } catch {
-        // File might not exist, continue with deletion
-      }
-    }
-
-    await prisma.material.delete({ where: { id: materialId } });
+    // Removes the blob from storage and the database row
+    await deleteMaterial(materialId, session.userId);
 
     logger.info("material.delete", {
       materialId,
