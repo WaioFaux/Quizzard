@@ -212,7 +212,7 @@ export default function LecturesPage({
           </svg>
           <h3 className="text-lg font-semibold mb-2">Chưa có buổi giảng nào</h3>
           <p className="text-muted-foreground mb-4 text-center max-w-sm">
-            Tạo buổi giảng từ tài liệu bằng tính năng Trò chuyện AI, hoặc thêm thủ công từ trang lớp của bạn.
+            Tạo buổi giảng từ tài liệu bằng tính năng &quot;Thêm buổi giảng bằng AI&quot; ở trang quản lý lớp, hoặc thêm thủ công từ trang lớp của bạn.
           </p>
           <Button variant="outline" onClick={() => router.push(`/teacher/classes/${classId}`)}>
             Đến trang quản lý lớp

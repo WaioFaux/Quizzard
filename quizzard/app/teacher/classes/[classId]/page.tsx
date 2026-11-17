@@ -84,6 +84,8 @@ export default function TeacherClassDashboardPage({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isLectureDialogOpen, setIsLectureDialogOpen] = useState(false);
+  const [isAiLectureDialogOpen, setIsAiLectureDialogOpen] = useState(false);
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -272,6 +274,14 @@ export default function TeacherClassDashboardPage({
     }
   }
 
+  function handleStartAiLecture() {
+    if (!selectedMaterialId) return;
+
+    setIsAiLectureDialogOpen(false);
+    setChatMaterialId(selectedMaterialId);
+    setSelectedMaterialId(null);
+  }
+
   async function handleDeleteMaterial(materialId: string) {
     if (!confirm("Bạn có chắc muốn xóa tài liệu này? Hành động này không thể hoàn tác.")) {
       return;
@@ -331,6 +341,8 @@ export default function TeacherClassDashboardPage({
       });
     }
   }
+
+  const processedMaterials = cls?.materials.filter((m) => m.status === "PROCESSED") ?? [];
 
   function getStatusBadge(status: string) {
     switch (status) {
@@ -624,34 +636,6 @@ export default function TeacherClassDashboardPage({
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusBadge(material.status)}
-                      {material.status === "PROCESSED" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setChatMaterialId(material.id)}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mr-2"
-                          >
-                            <path d="M12 8V4H8" />
-                            <rect width="16" height="12" x="4" y="8" rx="2" />
-                            <path d="M2 14h2" />
-                            <path d="M20 14h2" />
-                            <path d="M15 13v2" />
-                            <path d="M9 13v2" />
-                          </svg>
-                          Trò chuyện AI
-                        </Button>
-                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -684,59 +668,173 @@ export default function TeacherClassDashboardPage({
         <TabsContent value="lectures" className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-semibold">Buổi giảng</h2>
-            <Dialog open={isLectureDialogOpen} onOpenChange={setIsLectureDialogOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="mr-2"
-                  >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  Thêm buổi giảng
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <form onSubmit={handleCreateLecture}>
+            <div className="flex items-center gap-2">
+              <Dialog open={isAiLectureDialogOpen} onOpenChange={setIsAiLectureDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="mr-2"
+                    >
+                      <path d="M12 8V4H8" />
+                      <rect width="16" height="12" x="4" y="8" rx="2" />
+                      <path d="M2 14h2" />
+                      <path d="M20 14h2" />
+                      <path d="M15 13v2" />
+                      <path d="M9 13v2" />
+                    </svg>
+                    Thêm buổi giảng bằng AI
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Thêm buổi giảng</DialogTitle>
+                    <DialogTitle>Thêm buổi giảng bằng AI</DialogTitle>
                     <DialogDescription>
-                      Tạo buổi giảng mới cho lớp này
+                      Chọn một tài liệu đã tải lên để AI lập kế hoạch buổi giảng
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="lecture-title">Tiêu đề buổi giảng</Label>
-                      <Input
-                        id="lecture-title"
-                        placeholder="VD: Buổi 1 - Giới thiệu"
-                        value={lectureForm.title}
-                        onChange={(e) =>
-                          setLectureForm({ title: e.target.value })
-                        }
-                        required
-                      />
+                  {processedMaterials.length === 0 ? (
+                    <div className="py-4 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Bạn chưa có tài liệu nào đã xử lý. Hãy tải lên tài liệu ở tab
+                        &quot;Tài liệu&quot; trước.
+                      </p>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-2 py-4 max-h-72 overflow-y-auto">
+                      {processedMaterials.map((material) => (
+                        <button
+                          key={material.id}
+                          type="button"
+                          onClick={() => setSelectedMaterialId(material.id)}
+                          className={`w-full text-left flex items-center gap-3 rounded-md border p-3 transition-colors ${
+                            selectedMaterialId === material.id
+                              ? "border-primary bg-accent"
+                              : "border-border hover:bg-accent/50"
+                          }`}
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="text-muted-foreground shrink-0"
+                          >
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                          </svg>
+                          <span className="flex-1 truncate font-medium">
+                            {material.fileName}
+                          </span>
+                          {selectedMaterialId === material.id && (
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="text-primary shrink-0"
+                            >
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setIsLectureDialogOpen(false)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsAiLectureDialogOpen(false);
+                        setSelectedMaterialId(null);
+                      }}
+                    >
                       Hủy
                     </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Đang tạo..." : "Tạo"}
+                    <Button
+                      type="button"
+                      disabled={!selectedMaterialId}
+                      onClick={handleStartAiLecture}
+                    >
+                      Bắt đầu với AI
                     </Button>
                   </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isLectureDialogOpen} onOpenChange={setIsLectureDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="mr-2"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Thêm buổi giảng
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <form onSubmit={handleCreateLecture}>
+                    <DialogHeader>
+                      <DialogTitle>Thêm buổi giảng</DialogTitle>
+                      <DialogDescription>
+                        Tạo buổi giảng mới cho lớp này
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="lecture-title">Tiêu đề buổi giảng</Label>
+                        <Input
+                          id="lecture-title"
+                          placeholder="VD: Buổi 1 - Giới thiệu"
+                          value={lectureForm.title}
+                          onChange={(e) =>
+                            setLectureForm({ title: e.target.value })
+                          }
+                          required
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="button" variant="outline" onClick={() => setIsLectureDialogOpen(false)}>
+                        Hủy
+                      </Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "Đang tạo..." : "Tạo"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
 
           {cls.lectures.length === 0 ? (
