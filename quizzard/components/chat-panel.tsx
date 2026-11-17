@@ -9,6 +9,29 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { getAIHeaders } from "@/lib/ai/client-preferences";
 
+/**
+ * Read the error message from a failed response.
+ *
+ * The API answers with a JSON error body, but a serverless function timeout
+ * or a gateway error comes back as plain text or HTML. Calling
+ * response.json() on that throws and hides the real reason, so the body is
+ * read as text first and parsed only when it really is JSON.
+ */
+async function readErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = await response.text().catch(() => "");
+
+  if (!body.trim()) {
+    return fallback;
+  }
+
+  try {
+    const data = JSON.parse(body);
+    return data?.error || data?.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 interface LectureProposal {
   title: string;
   startPage: number;
@@ -81,8 +104,9 @@ export function ChatPanel({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to start chat session");
+        throw new Error(
+          await readErrorMessage(response, "Failed to start chat session")
+        );
       }
 
       const data = await response.json();
@@ -132,8 +156,9 @@ export function ChatPanel({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to send message");
+        throw new Error(
+          await readErrorMessage(response, "Failed to send message")
+        );
       }
 
       const data = await response.json();
@@ -178,8 +203,9 @@ export function ChatPanel({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to confirm plan");
+        throw new Error(
+          await readErrorMessage(response, "Failed to confirm plan")
+        );
       }
 
       const data = await response.json();
@@ -225,8 +251,9 @@ export function ChatPanel({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update proposals");
+        throw new Error(
+          await readErrorMessage(response, "Failed to update proposals")
+        );
       }
 
       const data = await response.json();

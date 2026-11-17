@@ -71,6 +71,21 @@ export class AIProviderError extends AppError {
   }
 }
 
+/**
+ * The provider answered, but the answer was not usable - most often a
+ * response that is not valid JSON because the model wrapped it in prose or
+ * truncated it. This is reported separately from AIProviderError so the
+ * user sees an actionable message instead of a generic server error.
+ */
+export class AIResponseError extends AppError {
+  constructor(
+    message = "The AI returned a response that could not be read. Please try again."
+  ) {
+    super(message, "AI_INVALID_RESPONSE", 502);
+    this.name = "AIResponseError";
+  }
+}
+
 export class IllegalTransitionError extends AppError {
   constructor(entity: string, from: string, to: string) {
     super(

@@ -4,7 +4,7 @@
  */
 
 import { config } from "../config";
-import { AIProviderError } from "../utils/errors";
+import { AIProviderError, AIResponseError } from "../utils/errors";
 import { ALL_MODELS, type AIProvider } from "./available-models";
 
 export type { AIProvider } from "./available-models";
@@ -112,6 +112,21 @@ export function getAISettings(headers?: Headers): {
   return getProviderSettings(configuredProviders[0]);
 }
 
+/**
+ * Models that are tried when the provider's primary model is unavailable.
+ *
+ * A model that is overloaded (503) or out of quota (429) does not stop the
+ * provider from answering - another model on the same key usually can.
+ */
+export function getFallbackModels(provider: AIProvider): string[] {
+  if (provider === "gemini") {
+    return config.gemini.fallbackModels.filter(
+      (model) => model !== config.gemini.model
+    );
+  }
+  return [];
+}
+
 /** A provider answered with a non-2xx status. */
 class ProviderHttpError extends Error {
   constructor(
@@ -139,9 +154,14 @@ class ProviderNetworkError extends Error {
  * Only transient failures are worth retrying. A 400/403/404 means the
  * request itself is wrong (bad model id, exhausted key quota), and retrying
  * it only burns the request budget.
+ *
+ * A 429 (rate limit / quota) is not retried either: the limit will still be
+ * in place a second later. Retrying it would waste the budget that the
+ * fallback provider needs, so the client moves on to the next provider
+ * straight away.
  */
 function isRetryableStatus(status: number): boolean {
-  return status === 408 || status === 429 || status >= 500;
+  return status === 408 || status >= 500;
 }
 
 /**
@@ -162,20 +182,28 @@ export async function callAIForJSON<T>(
 
   // Build the ordered list of provider/model combinations to try.
   const candidates: Array<{ provider: AIProvider; model: string }> = [];
+  const addCandidate = (provider: AIProvider, model: string) => {
+    if (!model) return;
+    if (candidates.some((c) => c.provider === provider && c.model === model)) {
+      return;
+    }
+    candidates.push({ provider, model });
+  };
+
   if (options.provider) {
-    candidates.push({
-      provider: options.provider,
-      model: options.model ?? getProviderSettings(options.provider).model,
-    });
+    addCandidate(
+      options.provider,
+      options.model ?? getProviderSettings(options.provider).model
+    );
   }
   for (const provider of getConfiguredProviders()) {
     const settings = getProviderSettings(provider);
-    if (
-      !candidates.some(
-        (c) => c.provider === settings.provider && c.model === settings.model
-      )
-    ) {
-      candidates.push(settings);
+    addCandidate(settings.provider, settings.model);
+
+    // Same provider, another model. A model that is overloaded or out of
+    // quota does not mean the provider cannot answer.
+    for (const fallback of getFallbackModels(provider)) {
+      addCandidate(provider, fallback);
     }
   }
 
@@ -195,6 +223,8 @@ export async function callAIForJSON<T>(
     Date.now() +
     Math.min(config.ai.totalBudgetMs, options.budgetMs ?? config.ai.totalBudgetMs);
   const failures: string[] = [];
+  let sawInvalidResponse = false;
+  let sawQuotaError = false;
 
   for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
     const candidate = candidates[candidateIndex];
@@ -202,13 +232,24 @@ export async function callAIForJSON<T>(
     // Every provider gets a share of the remaining budget. Without this a
     // slow primary provider (Gemini can take 30s+ when it is overloaded)
     // would eat the whole budget and the fallback provider would never get a
-    // chance to answer. The primary gets the larger share; the last provider
-    // gets whatever is left.
+    // chance to answer. The primary gets the larger share; the remaining
+    // candidates share what is left.
     const remainingBudget = deadline - Date.now();
     const isLastCandidate = candidateIndex === candidates.length - 1;
-    const slice = isLastCandidate
-      ? remainingBudget
-      : Math.max(10_000, Math.floor(remainingBudget * 0.6));
+    const remainingCandidates = candidates.length - candidateIndex;
+
+    let slice: number;
+    if (isLastCandidate) {
+      slice = remainingBudget;
+    } else {
+      const firstShare = Math.max(8_000, Math.floor(remainingBudget * 0.5));
+      const othersShare = Math.max(
+        8_000,
+        Math.floor((remainingBudget - firstShare) / (remainingCandidates - 1))
+      );
+      slice = candidateIndex === 0 ? firstShare : othersShare;
+    }
+
     const providerDeadline = Date.now() + slice;
 
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -251,10 +292,18 @@ export async function callAIForJSON<T>(
 
         return result;
       } catch (error) {
+        if (error instanceof AIResponseError) {
+          sawInvalidResponse = true;
+        }
+
         const status =
           error instanceof ProviderHttpError ? error.status : undefined;
         const retryable =
           status === undefined ? true : isRetryableStatus(status);
+
+        if (status === 429) {
+          sawQuotaError = true;
+        }
 
         failures.push(
           `${candidate.provider}:${status ?? "network"} ${truncate(
@@ -301,6 +350,20 @@ export async function callAIForJSON<T>(
     failures,
     timestamp: new Date().toISOString(),
   });
+
+  // A provider answered but with something we could not read - report that
+  // specifically instead of claiming the whole service is down.
+  if (sawInvalidResponse) {
+    throw new AIResponseError();
+  }
+
+  // Every provider refused the request because its quota is used up. Saying
+  // so is more useful than a generic "temporarily unavailable".
+  if (sawQuotaError) {
+    throw new AIProviderError(
+      "The AI service has reached its quota for now. Please try again later."
+    );
+  }
 
   throw new AIProviderError();
 }
@@ -452,46 +515,110 @@ async function callGemini<T>(
 }
 
 /**
+ * Find the first balanced JSON value in a piece of text.
+ *
+ * Models regularly wrap their JSON in prose ("Here is the plan: {...}") or in
+ * markdown fences, and free models sometimes truncate their output. A greedy
+ * regex cannot cope with any of that: it spans from the first bracket to the
+ * last one and happily returns half-written JSON, which then fails to parse
+ * and surfaces as a generic server error. This scans for the first opening
+ * bracket and walks forward, tracking string literals, until the matching
+ * closing bracket is found.
+ */
+export function extractJSONValue(text: string): string | null {
+  for (let i = 0; i < text.length; i++) {
+    const opener = text[i];
+    if (opener !== "{" && opener !== "[") continue;
+
+    const closer = opener === "{" ? "}" : "]";
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let j = i; j < text.length; j++) {
+      const char = text[j];
+
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (char === opener) depth++;
+      else if (char === closer) {
+        depth--;
+        if (depth === 0) return text.slice(i, j + 1);
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Strip markdown code fences that surround a JSON payload.
+ */
+function stripCodeFences(text: string): string {
+  return text
+    .replace(/```[a-zA-Z0-9_-]*\s*/g, "")
+    .replace(/```/g, "")
+    .trim();
+}
+
+/**
  * Parse AI response and extract JSON
  */
 function parseAIResponse<T>(content: string): T {
-  let cleanedText = content.trim();
+  const trimmed = content.trim();
+  const unfenced = stripCodeFences(content);
 
-  // Remove markdown code blocks if present
-  if (cleanedText.startsWith("```json")) {
-    cleanedText = cleanedText.slice(7);
-  } else if (cleanedText.startsWith("```")) {
-    cleanedText = cleanedText.slice(3);
+  // Candidate payloads, best first: the raw text, the text without code
+  // fences, and the first balanced JSON value found in either of them.
+  const candidates: string[] = [];
+  const pushCandidate = (value: string | null) => {
+    if (value && value.trim() && !candidates.includes(value.trim())) {
+      candidates.push(value.trim());
+    }
+  };
+
+  pushCandidate(trimmed);
+  pushCandidate(unfenced);
+  pushCandidate(extractJSONValue(unfenced));
+  pushCandidate(extractJSONValue(trimmed));
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as T;
+      console.log(`${LOG_PREFIX} [PARSE] JSON parsed successfully`, {
+        candidateLength: candidate.length,
+        timestamp: new Date().toISOString(),
+      });
+      return parsed;
+    } catch (parseError) {
+      console.warn(`${LOG_PREFIX} [PARSE] Candidate is not valid JSON`, {
+        parseError: parseError instanceof Error ? parseError.message : String(parseError),
+        candidateLength: candidate.length,
+        candidatePreview: candidate.substring(0, 200),
+        timestamp: new Date().toISOString(),
+      });
+    }
   }
 
-  if (cleanedText.endsWith("```")) {
-    cleanedText = cleanedText.slice(0, -3);
-  }
-
-  cleanedText = cleanedText.trim();
-
-  console.log(`${LOG_PREFIX} [PARSE] Cleaned response text`, {
-    cleanedLength: cleanedText.length,
-    cleanedPreview: cleanedText.substring(0, 200),
+  console.error(`${LOG_PREFIX} [PARSE] No JSON payload found in AI response`, {
+    contentLength: content.length,
+    contentPreview: content.substring(0, 300),
     timestamp: new Date().toISOString(),
   });
 
-  // Try to parse as JSON
-  try {
-    return JSON.parse(cleanedText) as T;
-  } catch (parseError) {
-    console.warn(`${LOG_PREFIX} [PARSE] Standard JSON parse failed, trying regex extraction`, {
-      parseError: parseError instanceof Error ? parseError.message : String(parseError),
-      timestamp: new Date().toISOString(),
-    });
-
-    // Try regex extraction for JSON arrays or objects
-    const jsonMatch = cleanedText.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as T;
-    }
-    throw new Error("Failed to parse JSON from AI response");
-  }
+  // A typed error, so the client gets an actionable message and the retry
+  // loop can still try another provider.
+  throw new AIResponseError();
 }
 
 // ---------------------------------------------------------------------------

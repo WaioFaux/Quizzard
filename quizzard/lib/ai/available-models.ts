@@ -171,6 +171,14 @@ const OPENROUTER_PREMIUM: ModelOption[] = [
 // GEMINI MODELS (Direct API)
 // ============================================
 
+/**
+ * Gemini models reachable through the direct API.
+ *
+ * Only models that are actually served are listed: Google retired the
+ * 2.x line for newer accounts and the 3.8 Pro model is not available on the
+ * v1beta endpoint, so offering them in the settings screen only produced
+ * requests that failed with 404.
+ */
 const GEMINI_MODELS: ModelOption[] = [
   {
     id: "gemini-3.8-flash",
@@ -183,28 +191,7 @@ const GEMINI_MODELS: ModelOption[] = [
     id: "gemini-3.5-flash",
     name: "Gemini 3.5 Flash",
     provider: "gemini",
-    description: "Enhanced capabilities with improved reasoning.",
-    contextLength: 1048576,
-  },
-  {
-    id: "gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
-    provider: "gemini",
-    description: "Reliable fast model with strong performance.",
-    contextLength: 1048576,
-  },
-  {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
-    provider: "gemini",
-    description: "Fast and capable. Great for most tasks.",
-    contextLength: 1048576,
-  },
-  {
-    id: "gemini-3.8-pro",
-    name: "Gemini 3.8 Pro",
-    provider: "gemini",
-    description: "Most capable Gemini model for complex tasks.",
+    description: "Enhanced capabilities with improved reasoning. Used as fallback when 3.8 Flash is overloaded.",
     contextLength: 1048576,
   },
 ];

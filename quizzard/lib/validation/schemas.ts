@@ -245,6 +245,36 @@ export const LectureProposalsSchema = z
   .min(1, "At least one lecture proposal is required")
   .max(50, "Too many lecture proposals");
 
+/**
+ * Shape of a lecture produced by the AI when a plan is confirmed.
+ *
+ * The values come straight from a language model, so every field is
+ * coerced: models routinely send page numbers and counts as strings. Anything
+ * that cannot be coerced is rejected, which keeps malformed values away
+ * from the database.
+ */
+export const LectureFormatSchema = z.object({
+  title: z.string().trim().min(1, "Lecture title is required").max(200),
+  sourceRef: z
+    .object({
+      startPage: z.coerce.number().int().min(0).max(100000),
+      endPage: z.coerce.number().int().min(0).max(100000),
+    })
+    .optional(),
+  quiz: z
+    .object({
+      instructions: z.preprocess(
+        (value) =>
+          typeof value === "string" || typeof value === "number"
+            ? String(value)
+            : undefined,
+        z.string().trim().max(4000).optional()
+      ),
+      questionCount: z.coerce.number().int().min(1).max(100).optional(),
+    })
+    .optional(),
+});
+
 export const ChatMessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
   content: z.string().min(1).max(20000),

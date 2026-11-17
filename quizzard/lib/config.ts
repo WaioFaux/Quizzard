@@ -19,6 +19,14 @@ export const config = {
   gemini: {
     apiKey: optional("GEMINI_API_KEY"),
     model: optional("GEMINI_MODEL") ?? "gemini-3.8-flash",
+    // Models tried, in order, when the primary one is unavailable. Gemini
+    // answers 503 "high demand" when a model is overloaded and 429 when the
+    // key quota is spent, so a second model often succeeds where the first
+    // one cannot.
+    fallbackModels: (optional("GEMINI_FALLBACK_MODELS") ?? "gemini-3.5-flash")
+      .split(",")
+      .map((model) => model.trim())
+      .filter(Boolean),
   },
   ai: {
     // Hard ceiling for a single provider call. Serverless functions have a

@@ -13,6 +13,7 @@
 import { prisma } from "../db";
 import { NotFoundError, AuthorizationError, ValidationError } from "../utils/errors";
 import { callAIForJSON, getAISettings } from "./ai-client";
+import { LectureFormatSchema } from "../validation/schemas";
 import {
   LectureProposal,
   LectureFormat,
@@ -107,6 +108,45 @@ function normalizeProposals(
   }
 
   return normalized;
+}
+
+/**
+ * Validate the lectures the model produced for a confirmed plan.
+ *
+ * The payload comes from a language model, so a single malformed entry must
+ * not sink the whole plan: invalid entries are dropped and the valid ones
+ * are kept. Numbers are coerced because models frequently send page ranges
+ * and question counts as strings.
+ */
+function normalizeLectureFormats(value: unknown): LectureFormat[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const lectures: LectureFormat[] = [];
+
+  for (const entry of value.slice(0, MAX_LECTURES)) {
+    const parsed = LectureFormatSchema.safeParse(entry);
+
+    if (!parsed.success) {
+      console.warn(`${LOG_PREFIX} [PLAN] Dropping malformed lecture`, {
+        issues:
+          parsed.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            message: issue.message,
+          })),
+        title:
+          entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).title === "string"
+            ? (entry as Record<string, unknown>).title
+            : undefined,
+      });
+      continue;
+    }
+
+    lectures.push(parsed.data as LectureFormat);
+  }
+
+  return lectures;
 }
 
 /**
@@ -231,13 +271,11 @@ export async function confirmLecturePlan(
     lectures: LectureFormat[];
   }>(prompt, { ...aiSettings, budgetMs: AI_BUDGET_MS });
 
-  const lectures = Array.isArray(aiResponse.lectures)
-    ? aiResponse.lectures.slice(0, MAX_LECTURES)
-    : [];
+  const lectures = normalizeLectureFormats(aiResponse.lectures);
 
   if (lectures.length === 0) {
     throw new ValidationError(
-      "The AI did not return any lectures for this plan. Please try again."
+      "The AI did not return any usable lectures for this plan. Please try again."
     );
   }
 
@@ -288,66 +326,72 @@ interface ChatResponse {
 }
 
 // Helper function to create lectures from format
-async function createLecturesFromFormat(
+export async function createLecturesFromFormat(
   classId: string,
   teacherId: string,
   materialId: string,
   lectures: LectureFormat[]
 ): Promise<Array<{ lectureId: string; quizId: string }>> {
-  const results: Array<{ lectureId: string; quizId: string }> = [];
+  // A transaction keeps the class consistent: either every lecture and its
+  // quiz draft are created, or nothing is. A half-created plan used to be
+  // left behind whenever one row failed.
+  return prisma.$transaction(async (tx) => {
+    const results: Array<{ lectureId: string; quizId: string }> = [];
 
-  // Get current max order
-  const lastLecture = await prisma.lecture.findFirst({
-    where: { classId },
-    orderBy: { order: "desc" },
-  });
-  let currentOrder = lastLecture?.order ?? 0;
-
-  for (const lectureFormat of lectures) {
-    currentOrder += 1;
-
-    const title =
-      typeof lectureFormat?.title === "string" && lectureFormat.title.trim()
-        ? lectureFormat.title.trim().slice(0, 200)
-        : `Lecture ${currentOrder}`;
-
-    // Create lecture
-    const lecture = await prisma.lecture.create({
-      data: {
-        classId,
-        materialId,
-        title,
-        sourceRef: lectureFormat.sourceRef ?? undefined,
-        order: currentOrder,
-      },
+    // Get current max order inside the transaction so the unique
+    // (classId, order) constraint cannot be violated by a concurrent write.
+    const lastLecture = await tx.lecture.findFirst({
+      where: { classId },
+      orderBy: { order: "desc" },
     });
+    let currentOrder = lastLecture?.order ?? 0;
 
-    // Create associated quiz draft
-    const quiz = await prisma.quiz.create({
-      data: {
+    for (const lectureFormat of lectures) {
+      currentOrder += 1;
+
+      const title =
+        typeof lectureFormat?.title === "string" && lectureFormat.title.trim()
+          ? lectureFormat.title.trim().slice(0, 200)
+          : `Lecture ${currentOrder}`;
+
+      // Create lecture
+      const lecture = await tx.lecture.create({
+        data: {
+          classId,
+          materialId,
+          title,
+          sourceRef: lectureFormat.sourceRef ?? undefined,
+          order: currentOrder,
+        },
+      });
+
+      // Create associated quiz draft
+      const quiz = await tx.quiz.create({
+        data: {
+          lectureId: lecture.id,
+          instructions:
+            lectureFormat.quiz?.instructions ||
+            `Questions for: ${title}`,
+          questionsPerAttempt: Math.min(
+            Math.max(lectureFormat.quiz?.questionCount || 5, 1),
+            100
+          ),
+          timeLimitMinutes: 30,
+        },
+      });
+
+      results.push({
         lectureId: lecture.id,
-        instructions:
-          lectureFormat.quiz?.instructions ||
-          `Questions for: ${title}`,
-        questionsPerAttempt: Math.min(
-          Math.max(lectureFormat.quiz?.questionCount || 5, 1),
-          100
-        ),
-        timeLimitMinutes: 30,
-      },
-    });
+        quizId: quiz.id,
+      });
 
-    results.push({
-      lectureId: lecture.id,
-      quizId: quiz.id,
-    });
+      console.log(`${LOG_PREFIX} Created lecture`, {
+        lectureId: lecture.id,
+        quizId: quiz.id,
+        title,
+      });
+    }
 
-    console.log(`${LOG_PREFIX} Created lecture`, {
-      lectureId: lecture.id,
-      quizId: quiz.id,
-      title,
-    });
-  }
-
-  return results;
+    return results;
+  });
 }
