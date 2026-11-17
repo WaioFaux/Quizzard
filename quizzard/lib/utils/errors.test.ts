@@ -30,7 +30,7 @@ describe("AppError", () => {
 describe("AuthorizationError", () => {
   it("should have correct defaults", () => {
     const error = new AuthorizationError();
-    expect(error.message).toBe("Unauthorized");
+    expect(error.message).toBe("Không có quyền truy cập");
     expect(error.code).toBe("UNAUTHORIZED");
     expect(error.statusCode).toBe(403);
     expect(error.name).toBe("AuthorizationError");
@@ -43,17 +43,17 @@ describe("AuthorizationError", () => {
 });
 
 describe("NotFoundError", () => {
-  it("should default resource to 'Resource'", () => {
+  it("should default resource to 'Tài nguyên'", () => {
     const error = new NotFoundError();
-    expect(error.message).toBe("Resource not found");
+    expect(error.message).toBe("Không tìm thấy Tài nguyên");
     expect(error.code).toBe("NOT_FOUND");
     expect(error.statusCode).toBe(404);
     expect(error.name).toBe("NotFoundError");
   });
 
   it("should format resource name", () => {
-    const error = new NotFoundError("Class");
-    expect(error.message).toBe("Class not found");
+    const error = new NotFoundError("Lớp");
+    expect(error.message).toBe("Không tìm thấy Lớp");
   });
 });
 
@@ -80,7 +80,7 @@ describe("ConflictError", () => {
 describe("DeadlinePassedError", () => {
   it("should have correct message and code", () => {
     const error = new DeadlinePassedError();
-    expect(error.message).toBe("Quiz deadline has passed");
+    expect(error.message).toBe("Đã quá hạn chót của bài kiểm tra");
     expect(error.code).toBe("DEADLINE_PASSED");
     expect(error.statusCode).toBe(400);
   });
@@ -89,7 +89,9 @@ describe("DeadlinePassedError", () => {
 describe("AttemptInProgressError", () => {
   it("should have correct message and code", () => {
     const error = new AttemptInProgressError();
-    expect(error.message).toBe("You already have an attempt in progress for this quiz");
+    expect(error.message).toBe(
+      "Bạn đang có một lượt làm bài chưa hoàn thành cho bài kiểm tra này"
+    );
     expect(error.code).toBe("ATTEMPT_EXISTS");
     expect(error.statusCode).toBe(409);
   });
@@ -98,7 +100,7 @@ describe("AttemptInProgressError", () => {
 describe("QuizNotPublishedError", () => {
   it("should have correct message and code", () => {
     const error = new QuizNotPublishedError();
-    expect(error.message).toBe("Quiz is not published yet");
+    expect(error.message).toBe("Bài kiểm tra chưa được xuất bản");
     expect(error.code).toBe("QUIZ_NOT_PUBLISHED");
     expect(error.statusCode).toBe(400);
   });
@@ -107,7 +109,9 @@ describe("QuizNotPublishedError", () => {
 describe("IllegalTransitionError", () => {
   it("should format transition message", () => {
     const error = new IllegalTransitionError("Quiz", "DRAFT", "PUBLISHED");
-    expect(error.message).toBe("Illegal Quiz transition from DRAFT to PUBLISHED");
+    expect(error.message).toBe(
+      "Chuyển trạng thái Quiz không hợp lệ từ DRAFT sang PUBLISHED"
+    );
     expect(error.code).toBe("ILLEGAL_TRANSITION");
     expect(error.statusCode).toBe(400);
   });
@@ -116,7 +120,9 @@ describe("IllegalTransitionError", () => {
 describe("QuizAlreadyPublishedError", () => {
   it("should have correct message and code", () => {
     const error = new QuizAlreadyPublishedError();
-    expect(error.message).toBe("Cannot modify question bank of a published quiz");
+    expect(error.message).toBe(
+      "Không thể chỉnh sửa ngân hàng câu hỏi của bài kiểm tra đã xuất bản"
+    );
     expect(error.code).toBe("QUIZ_ALREADY_PUBLISHED");
     expect(error.statusCode).toBe(400);
   });

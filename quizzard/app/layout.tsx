@@ -16,13 +16,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Quizzard",
-  description: "AI-powered quiz platform for teachers and students",
+  description:
+    "Nền tảng kiểm tra trực tuyến tích hợp AI dành cho giáo viên và học sinh",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="vi"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-screen antialiased`}
     >

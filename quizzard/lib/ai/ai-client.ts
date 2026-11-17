@@ -18,6 +18,32 @@ const GEMINI_API_VERSION = "v1beta";
 // OpenRouter API constants
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
 
+/**
+ * Free OpenRouter models tried, in order, when the configured one fails.
+ *
+ * Every id is verified against the live OpenRouter catalog, and each one is
+ * checked against the live API for the two failure modes that would make it
+ * useless here:
+ *
+ * - `thinkingmachines/inkling-2-small:free` answers HTTP 403 "only
+ *   available on agentic harnesses", so it can never serve this app and is
+ *   deliberately excluded.
+ * - `inclusionai/ling-3.2-flash:free` is first because OpenRouter routes it
+ *   to a provider pool with its own shared-pool limit, so it keeps working
+ *   when the account-wide `openrouter_free_tier_daily` gate rejects the
+ *   other free models with HTTP 429.
+ *
+ * The list is deliberately limited to free models so a fallback never costs
+ * money without the teacher asking for a paid model.
+ */
+const OPENROUTER_FALLBACK_MODELS = [
+  "inclusionai/ling-3.2-flash:free",
+  "particle-ai/particle-1:free",
+  "nvidia/nemotron-3.5-lightning:free",
+  "recursive/flint-v1.0:free",
+  "liquid/lfm-3-1.7b:free",
+];
+
 export interface AICallOptions {
   /** Preferred provider. When omitted the configured provider order is used. */
   provider?: AIProvider;
@@ -124,7 +150,16 @@ export function getFallbackModels(provider: AIProvider): string[] {
       (model) => model !== config.gemini.model
     );
   }
-  return [];
+
+  // OpenRouter: try the other free models before giving up on the
+  // provider. A single free model can be temporarily unavailable - either
+  // the account's daily free-tier gate rejected it (HTTP 429
+  // "free-models-per-day"), or the provider behind it is down - while
+  // other free models still answer. The gate is enforced per free-model
+  // pool, so a fallback model can still succeed.
+  return OPENROUTER_FALLBACK_MODELS.filter(
+    (model) => model !== config.openrouter.defaultModel
+  );
 }
 
 /** A provider answered with a non-2xx status. */
@@ -225,6 +260,7 @@ export async function callAIForJSON<T>(
   const failures: string[] = [];
   let sawInvalidResponse = false;
   let sawQuotaError = false;
+  let sawOpenRouterFreeTierLimit = false;
 
   for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
     const candidate = candidates[candidateIndex];
@@ -305,6 +341,19 @@ export async function callAIForJSON<T>(
           sawQuotaError = true;
         }
 
+        // OpenRouter rejects free-model requests once the account's daily
+        // free-tier quota is spent. No other provider or model can serve
+        // the request at that point, so the caller gets a specific,
+        // actionable message instead of a generic "try again later".
+        if (
+          candidate.provider === "openrouter" &&
+          status === 429 &&
+          error instanceof ProviderHttpError &&
+          error.body.includes("free-models-per-day")
+        ) {
+          sawOpenRouterFreeTierLimit = true;
+        }
+
         failures.push(
           `${candidate.provider}:${status ?? "network"} ${truncate(
             describeProviderError(error),
@@ -360,8 +409,14 @@ export async function callAIForJSON<T>(
   // Every provider refused the request because its quota is used up. Saying
   // so is more useful than a generic "temporarily unavailable".
   if (sawQuotaError) {
+    if (sawOpenRouterFreeTierLimit) {
+      throw new AIProviderError(
+        "Các mô hình AI miễn phí đã đạt giới hạn yêu cầu trong ngày. Hãy nạp thêm credit vào tài khoản OpenRouter để có giới hạn cao hơn, hoặc thử lại sau khi giới hạn được đặt lại."
+      );
+    }
+
     throw new AIProviderError(
-      "The AI service has reached its quota for now. Please try again later."
+      "Dịch vụ AI đã hết hạn mức lúc này. Vui lòng thử lại sau."
     );
   }
 
@@ -399,7 +454,7 @@ async function callOpenRouter<T>(
   const apiKey = config.openrouter.apiKey;
 
   if (!apiKey) {
-    throw new ProviderHttpError("openrouter", 401, "OpenRouter API key not configured");
+    throw new ProviderHttpError("openrouter", 401, "Chưa cấu hình API key cho OpenRouter");
   }
 
   console.log(`${LOG_PREFIX} [OPENROUTER_REQUEST] Sending request`, {
@@ -461,7 +516,7 @@ async function callGemini<T>(
   const apiKey = config.gemini.apiKey;
 
   if (!apiKey) {
-    throw new ProviderHttpError("gemini", 401, "Gemini API key not configured");
+    throw new ProviderHttpError("gemini", 401, "Chưa cấu hình API key cho Gemini");
   }
 
   console.log(`${LOG_PREFIX} [GEMINI_REQUEST] Sending request`, {

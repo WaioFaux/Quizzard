@@ -44,7 +44,7 @@ export async function POST(
       const retryAfterMs = (err as { retryAfterMs: number }).retryAfterMs;
       const retryAfterSec = Math.ceil(retryAfterMs / 1000);
       return Response.json(
-        { error: "AI generation rate limit exceeded. Please try again later." },
+        { error: "Đã vượt giới hạn tạo câu hỏi bằng AI. Vui lòng thử lại sau." },
         { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
       );
     }

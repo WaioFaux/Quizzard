@@ -88,7 +88,7 @@ export default function ClassLeaderboardPage({
         }
       }
     } catch {
-      toast({ title: "Error", description: "Failed to load class", variant: "destructive" });
+      toast({ title: "Lỗi", description: "Không thể tải thông tin lớp", variant: "destructive" });
     } finally {
       setIsLoadingClass(false);
     }
@@ -107,12 +107,12 @@ export default function ClassLeaderboardPage({
     try {
       const res = await fetch(`/api/quizzes/${selectedQuizId}/leaderboard`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load leaderboard");
+      if (!res.ok) throw new Error(data.error || "Không thể tải bảng xếp hạng");
       setLeaderboard(data.data || []);
     } catch (err) {
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to load leaderboard",
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể tải bảng xếp hạng",
         variant: "destructive",
       });
     } finally {
@@ -166,10 +166,10 @@ export default function ClassLeaderboardPage({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          {cls?.name || "Class"}
+          {cls?.name || "Lớp"}
         </Button>
       </div>
-      <h1 className="text-2xl font-bold mb-6">Leaderboard</h1>
+      <h1 className="text-2xl font-bold mb-6">Bảng xếp hạng</h1>
 
       {/* Quiz Selector */}
       {quizzes.length > 0 && (
@@ -181,7 +181,7 @@ export default function ClassLeaderboardPage({
           >
             {quizzes.map((q) => (
               <option key={q.id} value={q.id}>
-                Lecture {q.lecture.order}: {q.lecture.title}
+                Bài giảng {q.lecture.order}: {q.lecture.title}
               </option>
             ))}
           </select>
@@ -202,7 +202,7 @@ export default function ClassLeaderboardPage({
           >
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
-          <p className="text-muted-foreground">No published quizzes in this class</p>
+          <p className="text-muted-foreground">Lớp này chưa có bài kiểm tra nào được công bố</p>
         </Card>
       ) : isLoadingBoard ? (
         <div className="space-y-2">
@@ -224,8 +224,8 @@ export default function ClassLeaderboardPage({
           >
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
-          <p className="text-muted-foreground">No results yet for this quiz</p>
-          <p className="text-sm text-muted-foreground mt-1">Be the first to complete it!</p>
+          <p className="text-muted-foreground">Chưa có kết quả cho bài kiểm tra này</p>
+          <p className="text-sm text-muted-foreground mt-1">Hãy là người đầu tiên hoàn thành!</p>
         </Card>
       ) : (
         <div className="max-w-2xl mx-auto">
@@ -238,7 +238,7 @@ export default function ClassLeaderboardPage({
                 </div>
                 <p className="font-medium text-center max-w-[100px] truncate">{leaderboard[1].studentName}</p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[1].score)}`}>
-                  {leaderboard[1].score} pts
+                  {leaderboard[1].score} điểm
                 </p>
                 <div className="w-20 h-16 bg-gray-300 rounded-t-lg flex items-center justify-center text-lg font-bold">2</div>
               </div>
@@ -248,7 +248,7 @@ export default function ClassLeaderboardPage({
                 </div>
                 <p className="font-semibold text-center max-w-[120px] truncate">{leaderboard[0].studentName}</p>
                 <p className={`text-2xl font-bold ${getScoreColor(leaderboard[0].score)}`}>
-                  {leaderboard[0].score} pts
+                  {leaderboard[0].score} điểm
                 </p>
                 <div className="w-24 h-20 bg-amber-400 rounded-t-lg flex items-center justify-center text-2xl font-bold">1</div>
               </div>
@@ -258,7 +258,7 @@ export default function ClassLeaderboardPage({
                 </div>
                 <p className="font-medium text-center max-w-[100px] truncate">{leaderboard[2].studentName}</p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[2].score)}`}>
-                  {leaderboard[2].score} pts
+                  {leaderboard[2].score} điểm
                 </p>
                 <div className="w-20 h-12 bg-amber-600 rounded-t-lg flex items-center justify-center text-lg font-bold text-white">3</div>
               </div>
@@ -268,9 +268,9 @@ export default function ClassLeaderboardPage({
           {/* Rankings List */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">All Rankings</CardTitle>
+              <CardTitle className="text-lg">Bảng xếp hạng đầy đủ</CardTitle>
               <CardDescription>
-                {leaderboard.length} student{leaderboard.length !== 1 ? "s" : ""} completed this quiz
+                {leaderboard.length} học sinh đã hoàn thành bài kiểm tra này
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -301,18 +301,18 @@ export default function ClassLeaderboardPage({
                           <div>
                             <p className="font-medium flex items-center gap-2">
                               {entry.studentName}
-                              {isCurrentUser && <Badge variant="secondary" className="text-xs">You</Badge>}
+                              {isCurrentUser && <Badge variant="secondary" className="text-xs">Bạn</Badge>}
                             </p>
                             {entry.submittedAt && (
                               <p className="text-xs text-muted-foreground">
-                                {new Date(entry.submittedAt).toLocaleString()}
+                                {new Date(entry.submittedAt).toLocaleString("vi-VN")}
                               </p>
                             )}
                           </div>
                         </div>
                       </div>
                       <p className={`text-xl font-bold ${getScoreColor(entry.score)}`}>
-                        {entry.score} pts
+                        {entry.score} điểm
                       </p>
                     </div>
                   );

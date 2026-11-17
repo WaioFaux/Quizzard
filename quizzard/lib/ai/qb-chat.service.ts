@@ -112,7 +112,7 @@ export async function startQBChatSession(
 
   if (!quiz) {
     console.error(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Quiz not found:`, quizId);
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
@@ -121,12 +121,12 @@ export async function startQBChatSession(
       quizOwner: quiz.lecture.class.teacherId,
       quizId,
     });
-    throw new AuthorizationError("You do not have access to this quiz");
+    throw new AuthorizationError("Bạn không có quyền truy cập bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {
     console.error(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Quiz is published, cannot modify:`, quizId);
-    throw new AuthorizationError("Cannot modify a published quiz");
+    throw new AuthorizationError("Không thể chỉnh sửa bài kiểm tra đã xuất bản");
   }
 
   console.log(`${LOG_PREFIX} [${LOG_PHASE.SESSION_START}] Session ready`, {
@@ -136,7 +136,7 @@ export async function startQBChatSession(
 
   return {
     response:
-      "Welcome to the Question Generator! Configure how many questions you want for each type and difficulty, then click **Generate** when ready.",
+      "Chào mừng đến với Trình tạo câu hỏi! Hãy cấu hình số câu hỏi bạn muốn cho từng loại và độ khó, rồi nhấn **Tạo câu hỏi** khi sẵn sàng.",
     plan: getDefaultGenerationPlan(),
     readyToGenerate: true,
   };
@@ -157,19 +157,19 @@ export async function saveQBPlan(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not have access to this quiz");
+    throw new AuthorizationError("Bạn không có quyền truy cập bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {
-    throw new AuthorizationError("Cannot modify a published quiz");
+    throw new AuthorizationError("Không thể chỉnh sửa bài kiểm tra đã xuất bản");
   }
 
   return {
-    response: "Settings saved. Click **Generate Questions** when ready.",
+    response: "Đã lưu cài đặt. Nhấn **Tạo câu hỏi** khi bạn đã sẵn sàng.",
     plan,
     readyToGenerate: true,
   };
@@ -196,7 +196,7 @@ export async function generateQuestions(
 
   if (!plan) {
     console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] No plan available for generation`);
-    throw new ValidationError("No generation plan. Please configure settings first.");
+    throw new ValidationError("Chưa có kế hoạch tạo câu hỏi. Vui lòng cấu hình cài đặt trước.");
   }
 
   // Fetch quiz (and the material for context)
@@ -213,15 +213,15 @@ export async function generateQuestions(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not have access to this quiz");
+    throw new AuthorizationError("Bạn không có quyền truy cập bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {
-    throw new AuthorizationError("Cannot modify a published quiz");
+    throw new AuthorizationError("Không thể chỉnh sửa bài kiểm tra đã xuất bản");
   }
 
   const materialText = quiz.lecture.material?.extractedText ?? undefined;
@@ -238,7 +238,7 @@ export async function generateQuestions(
   }
 
   if (enabledTypes.length === 0) {
-    throw new ValidationError("No question types are enabled. Please enable at least one type.");
+    throw new ValidationError("Chưa bật loại câu hỏi nào. Vui lòng bật ít nhất một loại.");
   }
 
   const difficulties: DifficultyLevel[] = ["easy", "medium", "hard"];
@@ -357,7 +357,7 @@ export async function generateQuestions(
   const allQuestions = bucketResults.flatMap((questions) => questions ?? []);
 
   if (allQuestions.length === 0) {
-    throw new ValidationError("No questions could be generated. Please try again.");
+    throw new ValidationError("Không thể tạo câu hỏi nào. Vui lòng thử lại.");
   }
 
   console.log(`${LOG_PREFIX} [${LOG_PHASE.DATABASE_SAVE}] Saving ${allQuestions.length} questions to database`, {
@@ -456,7 +456,7 @@ export async function generateQuestions(
     }
   }
 
-  const summary = `Generated ${createdCount} question(s). ${failedCount > 0 ? `${failedCount} failed.` : ""}`;
+  const summary = `Đã tạo ${createdCount} câu hỏi. ${failedCount > 0 ? `${failedCount} câu hỏi bị lỗi.` : ""}`;
 
   console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_COMPLETE}] Done`, {
     quizId,

@@ -42,13 +42,13 @@ export async function POST(req: NextRequest) {
     // Validate file type
     if (!ALLOWED_TYPES.includes(file.type)) {
       throw new ValidationError(
-        "Invalid file type. Only JPG, PNG, GIF, and WebP are allowed."
+        "Loại tệp không hợp lệ. Chỉ cho phép JPG, PNG, GIF và WebP."
       );
     }
 
     // Validate file size
     if (file.size > MAX_AVATAR_BYTES) {
-      throw new ValidationError("File too large. Maximum size is 2MB.");
+      throw new ValidationError("Tệp quá lớn. Kích thước tối đa là 2MB.");
     }
 
     const bytes = await file.arrayBuffer();

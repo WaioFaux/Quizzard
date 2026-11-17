@@ -79,8 +79,8 @@ export default function QuizConfigPage({
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load quiz",
+        title: "Lỗi",
+        description: "Không thể tải bài kiểm tra",
         variant: "destructive",
       });
     } finally {
@@ -101,17 +101,17 @@ export default function QuizConfigPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to save quiz");
+        throw new Error(data.error || "Không thể lưu bài kiểm tra");
       }
 
       toast({
-        title: "Success",
-        description: "Quiz settings saved",
+        title: "Thành công",
+        description: "Đã lưu cài đặt bài kiểm tra",
       });
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save quiz",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể lưu bài kiểm tra",
         variant: "destructive",
       });
     } finally {
@@ -136,8 +136,8 @@ export default function QuizConfigPage({
       } else {
         setPreviewQuestions([]);
         toast({
-          title: "Preview",
-          description: "Preview not available yet. Configure and save first.",
+          title: "Xem trước",
+          description: "Chưa có bản xem trước. Hãy cấu hình và lưu trước.",
         });
       }
     } catch (error) {
@@ -177,9 +177,9 @@ export default function QuizConfigPage({
     return (
       <div className="p-6">
         <Card className="flex flex-col items-center justify-center py-12">
-          <h3 className="text-lg font-semibold mb-2">Quiz not found</h3>
+          <h3 className="text-lg font-semibold mb-2">Không tìm thấy bài kiểm tra</h3>
           <Button variant="outline" onClick={() => router.push(`/teacher/classes/${classId}`)}>
-            Back to Class
+            Quay lại lớp
           </Button>
         </Card>
       </div>
@@ -212,24 +212,24 @@ export default function QuizConfigPage({
         </Button>
       </div>
       <h1 className="text-2xl font-bold mb-1">{quiz.lecture.title}</h1>
-      <p className="text-muted-foreground mb-6">Quiz Configuration</p>
+      <p className="text-muted-foreground mb-6">Cấu hình bài kiểm tra</p>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Quiz Settings</CardTitle>
+              <CardTitle>Cài đặt bài kiểm tra</CardTitle>
               <CardDescription>
-                Configure how students will take this quiz
+                Cấu hình cách học sinh sẽ làm bài kiểm tra này
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="instructions">AI Instructions</Label>
+                  <Label htmlFor="instructions">Hướng dẫn cho AI</Label>
                   <Textarea
                     id="instructions"
-                    placeholder="Describe what topics, difficulty level, and question types you want..."
+                    placeholder="Mô tả chủ đề, độ khó và dạng câu hỏi bạn muốn..."
                     rows={6}
                     value={formData.instructions}
                     onChange={(e) =>
@@ -237,14 +237,14 @@ export default function QuizConfigPage({
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Instructions for the AI when generating questions. Be specific about topics to cover,
-                    difficulty level, and preferred question types.
+                    Hướng dẫn cho AI khi tạo câu hỏi. Hãy nêu rõ chủ đề cần đề cập,
+                    độ khó và dạng câu hỏi ưu tiên.
                   </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="questions">Questions per Attempt</Label>
+                    <Label htmlFor="questions">Số câu hỏi mỗi lượt làm bài</Label>
                     <Input
                       id="questions"
                       type="number"
@@ -260,7 +260,7 @@ export default function QuizConfigPage({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="timelimit">Time Limit (minutes)</Label>
+                    <Label htmlFor="timelimit">Thời gian làm bài (phút)</Label>
                     <Input
                       id="timelimit"
                       type="number"
@@ -279,7 +279,7 @@ export default function QuizConfigPage({
 
                 <div className="flex gap-2">
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : "Save Settings"}
+                    {isSubmitting ? "Đang lưu..." : "Lưu cài đặt"}
                   </Button>
                   <Button
                     type="button"
@@ -287,7 +287,7 @@ export default function QuizConfigPage({
                     onClick={handlePreview}
                     disabled={isGeneratingPreview}
                   >
-                    {isGeneratingPreview ? "Generating..." : "Preview Sample Questions"}
+                    {isGeneratingPreview ? "Đang tạo..." : "Xem trước câu hỏi mẫu"}
                   </Button>
                 </div>
               </form>
@@ -297,9 +297,9 @@ export default function QuizConfigPage({
           {showPreview && (
             <Card>
               <CardHeader>
-                <CardTitle>Sample Questions Preview</CardTitle>
+                <CardTitle>Xem trước câu hỏi mẫu</CardTitle>
                 <CardDescription>
-                  3-5 example questions generated from your instructions
+                  3-5 câu hỏi mẫu được tạo từ hướng dẫn của bạn
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -327,7 +327,7 @@ export default function QuizConfigPage({
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-center py-4">
-                    No preview available. Make sure to save your settings first.
+                    Chưa có bản xem trước. Hãy lưu cài đặt trước.
                   </p>
                 )}
               </CardContent>
@@ -338,26 +338,26 @@ export default function QuizConfigPage({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Quiz Status</CardTitle>
+              <CardTitle>Trạng thái bài kiểm tra</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
+                <span className="text-sm text-muted-foreground">Trạng thái</span>
                 <Badge variant={quiz.status === "PUBLISHED" ? "default" : "secondary"}>
-                  {quiz.status === "PUBLISHED" ? "Published" : "Draft"}
+                  {quiz.status === "PUBLISHED" ? "Đã xuất bản" : "Nháp"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Questions in Bank</span>
+                <span className="text-sm text-muted-foreground">Số câu hỏi trong ngân hàng</span>
                 <span className="font-medium">{quiz._count.questionBank}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Attempts</span>
+                <span className="text-sm text-muted-foreground">Lượt làm bài</span>
                 <span className="font-medium">{quiz._count.attempts}</span>
               </div>
               {quiz.deadline && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Deadline</span>
+                  <span className="text-sm text-muted-foreground">Hạn chót</span>
                   <span className="font-medium">
                     {new Date(quiz.deadline).toLocaleDateString()}
                   </span>
@@ -368,7 +368,7 @@ export default function QuizConfigPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>Thao tác nhanh</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <Button
@@ -393,7 +393,7 @@ export default function QuizConfigPage({
                   <line x1="16" y1="13" x2="8" y2="13" />
                   <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
-                Question Bank ({quiz._count.questionBank})
+                Ngân hàng câu hỏi ({quiz._count.questionBank})
               </Button>
               <Button
                 variant="outline"
@@ -415,7 +415,7 @@ export default function QuizConfigPage({
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <polyline points="22 4 12 14.01 9 11.01" />
                 </svg>
-                Publish Quiz
+                Xuất bản bài kiểm tra
               </Button>
             </CardContent>
           </Card>

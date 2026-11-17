@@ -32,11 +32,11 @@ export async function generateSample(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   const result = await generateSampleQuestions(instructions, 3);
@@ -61,15 +61,15 @@ export async function generateQuestionBank(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {
-    throw new AuthorizationError("Cannot modify a published quiz");
+    throw new AuthorizationError("Không thể chỉnh sửa bài kiểm tra đã xuất bản");
   }
 
   const poolSize = count ?? quiz.questionsPerAttempt * 5;

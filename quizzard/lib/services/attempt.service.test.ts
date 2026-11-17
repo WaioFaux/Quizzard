@@ -143,7 +143,9 @@ describe("Attempt Service (mocked)", () => {
 
       const { startAttempt } = await import("../services/attempt.service");
 
-      await expect(startAttempt("student-1", "quiz-1")).rejects.toThrow("already completed");
+      await expect(startAttempt("student-1", "quiz-1")).rejects.toThrow(
+        "đã hoàn thành bài kiểm tra này"
+      );
     });
 
     it("should start an attempt successfully with approved questions", async () => {
@@ -228,7 +230,7 @@ describe("Attempt Service (mocked)", () => {
       const { startAttempt } = await import("../services/attempt.service");
 
       await expect(startAttempt("student-1", "quiz-1")).rejects.toThrow(
-        "No approved questions"
+        "chưa có câu hỏi nào được duyệt"
       );
     });
   });
@@ -283,7 +285,7 @@ describe("Attempt Service (mocked)", () => {
 
       await expect(
         submitAttempt("attempt-1", "student-1", [])
-      ).rejects.toThrow("already submitted");
+      ).rejects.toThrow("Lượt làm bài đã được nộp");
     });
   });
 });

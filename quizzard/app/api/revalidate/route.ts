@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     return Response.json(
-      { error: "Failed to revalidate" },
+      { error: "Không thể làm mới dữ liệu" },
       { status: 500 }
     );
   }

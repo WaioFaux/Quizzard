@@ -22,15 +22,15 @@ export async function createReport(
   });
 
   if (!answer) {
-    throw new NotFoundError("Answer");
+    throw new NotFoundError("Câu trả lời");
   }
 
   if (answer.attempt.studentId !== studentId) {
-    throw new AuthorizationError("This is not your answer");
+    throw new AuthorizationError("Đây không phải câu trả lời của bạn");
   }
 
   if (answer.attempt.status !== "SUBMITTED" && answer.attempt.status !== "AUTO_SUBMITTED") {
-    throw new AuthorizationError("Cannot report an answer from an unsubmitted attempt");
+    throw new AuthorizationError("Không thể báo cáo câu trả lời từ lượt làm bài chưa nộp");
   }
 
   const report = await prisma.questionReport.create({
@@ -156,11 +156,11 @@ export async function updateReport(
   });
 
   if (!report) {
-    throw new NotFoundError("Report");
+    throw new NotFoundError("Báo cáo");
   }
 
   if (report.studentAnswer.attempt.quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this report");
+    throw new AuthorizationError("Bạn không sở hữu báo cáo này");
   }
 
   return prisma.questionReport.update({

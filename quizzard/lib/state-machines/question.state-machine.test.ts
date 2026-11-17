@@ -36,7 +36,7 @@ describe("Question State Machine", () => {
 
     it("should throw on DRAFT to SUBMITTED", () => {
       expect(() => transitionQuestion(QuestionStatus.DRAFT, "SUBMITTED" as never))
-        .toThrow("Illegal Question transition");
+        .toThrow("Chuyển trạng thái Question không hợp lệ");
     });
   });
 });

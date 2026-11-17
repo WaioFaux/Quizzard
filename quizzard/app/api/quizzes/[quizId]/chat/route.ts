@@ -55,11 +55,11 @@ export async function POST(req: NextRequest) {
     const { action, quizId, plan } = body;
 
     if (!quizId) {
-      throw new ValidationError("quizId is required");
+      throw new ValidationError("Cần có quizId");
     }
 
     if (!action) {
-      throw new ValidationError("action is required");
+      throw new ValidationError("Cần có action");
     }
 
     console.log(`${LOG_PREFIX} [POST] Action: ${action}`, {
@@ -142,7 +142,7 @@ function parsePlan(plan: unknown) {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw new ValidationError(
-      issue ? `${issue.path.join(".") || "plan"}: ${issue.message}` : "Invalid generation plan"
+      issue ? `${issue.path.join(".") || "plan"}: ${issue.message}` : "Kế hoạch tạo câu hỏi không hợp lệ"
     );
   }
 

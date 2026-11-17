@@ -1,4 +1,5 @@
 import type { QuestionType } from "@prisma/client";
+import { VIETNAMESE_OUTPUT_RULE } from "./language";
 
 export interface PromptContext {
   topic: string;
@@ -90,12 +91,14 @@ Topic: ${sanitizedTopic}
 Difficulty: ${difficulty}
 Question types to generate: ${typeList}${materialSection}${existingList}
 
+${VIETNAMESE_OUTPUT_RULE}
+
 ## Requirements for Each Question Type:
 
 ### MCQ (Multiple Choice Questions)
 - Create exactly 4 distinct options (A, B, C, D)
 - One option must be clearly correct, others plausible but wrong
-- Avoid "all of the above" or "none of the above" options
+- Tránh các đáp án kiểu "tất cả các đáp án trên" hoặc "không có đáp án nào ở trên"
 - The prompt should not reveal the answer
 - Include a brief explanation for the correct answer
 
@@ -117,26 +120,26 @@ Return a JSON array of ${count} question objects. Each object must match exactly
 [
   {
     "type": "MCQ",
-    "prompt": "Question text here",
-    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "prompt": "Nội dung câu hỏi",
+    "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
     "correctOptionIndex": 0,
-    "explanation": "Why this is correct"
+    "explanation": "Giải thích vì sao đáp án này đúng"
   },
   {
     "type": "SHORT_ANSWER",
-    "prompt": "Question text here",
-    "correctAnswer": "The correct answer",
-    "explanation": "Optional explanation"
+    "prompt": "Nội dung câu hỏi",
+    "correctAnswer": "Đáp án đúng",
+    "explanation": "Giải thích (không bắt buộc)"
   },
   {
     "type": "CALCULATION",
-    "promptTemplate": "A store sells {num_items} items at {price_per_item} dollars each. What is the total cost?",
+    "promptTemplate": "Một cửa hàng bán {num_items} món với giá {price_per_item} đồng mỗi món. Tổng chi phí là bao nhiêu?",
     "variables": [
       {"name": "num_items", "min": 1, "max": 10, "decimals": 0},
       {"name": "price_per_item", "min": 10, "max": 100, "decimals": 2}
     ],
     "answerFormula": "num_items * price_per_item",
-    "explanation": "Multiply number of items by price per item"
+    "explanation": "Nhân số lượng món với giá của mỗi món"
   }
 ]
 \`\`\`
@@ -152,6 +155,8 @@ Question to review:
 ${JSON.stringify(question, null, 2)}
 \`\`\`
 
+${VIETNAMESE_OUTPUT_RULE}
+
 ## Review Checklist:
 1. **Factual Accuracy**: Is the question content factually correct?
 2. **Clarity**: Is the question clear and unambiguous?
@@ -166,8 +171,8 @@ Return a JSON object with your assessment:
 \`\`\`json
 {
   "flagged": true or false,
-  "reason": "If flagged, explain the specific issue(s) found",
-  "suggestion": "If flagged, provide a suggested correction"
+  "reason": "Nếu bị gắn cờ, giải thích cụ thể vấn đề phát hiện được",
+  "suggestion": "Nếu bị gắn cờ, đề xuất cách sửa"
 }
 \`\`\`
 
@@ -185,6 +190,8 @@ Source Material (excerpt, max 50000 chars):
 ${sanitizedText.slice(0, 50000)}
 \`\`\`
 
+${VIETNAMESE_OUTPUT_RULE}
+
 ## Guidelines for Lecture Division:
 - Each lecture should cover a distinct, coherent topic or chapter
 - Lectures should have descriptive titles (max 100 characters)
@@ -197,12 +204,12 @@ Return a JSON array of lecture proposals:
 \`\`\`json
 [
   {
-    "title": "Introduction to Database Concepts",
+    "title": "Giới thiệu về khái niệm cơ sở dữ liệu",
     "startPage": 1,
     "endPage": 10
   },
   {
-    "title": "Relational Data Modeling",
+    "title": "Mô hình hóa dữ liệu quan hệ",
     "startPage": 11,
     "endPage": 25
   }
@@ -226,6 +233,8 @@ ${JSON.stringify(question, null, 2)}
 Student's Answer:
 ${studentAnswer}
 
+${VIETNAMESE_OUTPUT_RULE}
+
 ## Grading Guidelines:
 - Compare the student's answer to the expected correct answer
 - For SHORT_ANSWER: Check if key elements are present (partial credit allowed)
@@ -236,7 +245,7 @@ ${studentAnswer}
 {
   "score": <number between 0 and maxScore>,
   "maxScore": <maximum possible score>,
-  "feedback": "Brief explanation of the grade and what was correct/incorrect"
+  "feedback": "Giải thích ngắn gọn về điểm và phần nào đúng/sai"
 }
 \`\`\`
 

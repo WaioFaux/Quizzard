@@ -106,8 +106,8 @@ export default function QuestionBankPage({
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load data",
+        title: "Lỗi",
+        description: "Không thể tải dữ liệu",
         variant: "destructive",
       });
     } finally {
@@ -178,12 +178,12 @@ export default function QuestionBankPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to add question");
+        throw new Error(data.error || "Không thể thêm câu hỏi");
       }
 
       toast({
-        title: "Success",
-        description: "Question added",
+        title: "Thành công",
+        description: "Đã thêm câu hỏi",
       });
 
       setIsAddingQuestion(false);
@@ -191,8 +191,8 @@ export default function QuestionBankPage({
       fetchData();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to add question",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể thêm câu hỏi",
         variant: "destructive",
       });
     } finally {
@@ -220,20 +220,20 @@ export default function QuestionBankPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to update question");
+        throw new Error(data.error || "Không thể cập nhật câu hỏi");
       }
 
       toast({
-        title: "Success",
-        description: "Question updated",
+        title: "Thành công",
+        description: "Đã cập nhật câu hỏi",
       });
 
       setEditingQuestion(null);
       fetchData();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update question",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể cập nhật câu hỏi",
         variant: "destructive",
       });
     } finally {
@@ -254,26 +254,26 @@ export default function QuestionBankPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to update status");
+        throw new Error(data.error || "Không thể cập nhật trạng thái");
       }
 
       toast({
-        title: "Success",
-        description: "Status updated",
+        title: "Thành công",
+        description: "Đã cập nhật trạng thái",
       });
 
       fetchData();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update status",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể cập nhật trạng thái",
         variant: "destructive",
       });
     }
   }
 
   async function handleDeleteQuestion(questionId: string) {
-    if (!confirm("Are you sure you want to delete this question?")) return;
+    if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) return;
 
     try {
       const res = await fetch(
@@ -285,19 +285,19 @@ export default function QuestionBankPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to delete question");
+        throw new Error(data.error || "Không thể xóa câu hỏi");
       }
 
       toast({
-        title: "Success",
-        description: "Question deleted",
+        title: "Thành công",
+        description: "Đã xóa câu hỏi",
       });
 
       fetchData();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete question",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xóa câu hỏi",
         variant: "destructive",
       });
     }
@@ -306,7 +306,7 @@ export default function QuestionBankPage({
   async function handleExport() {
     try {
       const res = await fetch(`/api/quizzes/${quizId}/question-bank/export`);
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) throw new Error("Xuất dữ liệu thất bại");
 
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -318,11 +318,11 @@ export default function QuestionBankPage({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({ title: "Success", description: "Question bank exported as CSV." });
+      toast({ title: "Thành công", description: "Đã xuất ngân hàng câu hỏi dưới dạng CSV." });
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to export",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xuất",
         variant: "destructive",
       });
     }
@@ -343,17 +343,17 @@ export default function QuestionBankPage({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Import failed");
+      if (!res.ok) throw new Error(data.error || "Nhập dữ liệu thất bại");
 
-      toast({ title: "Success", description: data.message });
+      toast({ title: "Thành công", description: data.message });
       setIsImportDialogOpen(false);
       setImportFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
       fetchData();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to import",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể nhập",
         variant: "destructive",
       });
     } finally {
@@ -379,11 +379,11 @@ export default function QuestionBankPage({
   function getStatusBadge(status: string) {
     switch (status) {
       case "FLAGGED_FOR_REVIEW":
-        return <Badge variant="destructive">Needs Review</Badge>;
+        return <Badge variant="destructive">Cần xem xét</Badge>;
       case "DRAFT":
-        return <Badge variant="secondary">Draft</Badge>;
+        return <Badge variant="secondary">Nháp</Badge>;
       case "APPROVED":
-        return <Badge variant="default">Approved</Badge>;
+        return <Badge variant="default">Đã duyệt</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -441,31 +441,31 @@ export default function QuestionBankPage({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          {quiz?.lecture?.title || "Quiz"}
+          {quiz?.lecture?.title || "Bài kiểm tra"}
         </Button>
       </div>
-      <h1 className="text-2xl font-bold mb-1">Question Bank</h1>
+      <h1 className="text-2xl font-bold mb-1">Ngân hàng câu hỏi</h1>
       <p className="text-muted-foreground mb-6">
-        Manage questions for this quiz
+        Quản lý các câu hỏi cho bài kiểm tra này
       </p>
 
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <span className="text-sm text-muted-foreground">
-            {questions.length} total questions
+            {questions.length} câu hỏi
           </span>
           <div className="flex items-center gap-2 text-sm">
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-red-500"></span>
-              {flaggedQuestions.length} flagged
+              {flaggedQuestions.length} bị gắn cờ
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-              {draftQuestions.length} draft
+              {draftQuestions.length} bản nháp
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-green-500"></span>
-              {approvedQuestions.length} approved
+              {approvedQuestions.length} đã duyệt
             </span>
           </div>
         </div>
@@ -489,7 +489,7 @@ export default function QuestionBankPage({
             >
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            Generate with AI
+            Tạo bằng AI
           </Button>
           <Button variant="outline" onClick={handleExport}>
             <svg
@@ -508,7 +508,7 @@ export default function QuestionBankPage({
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            Export CSV
+            Xuất CSV
           </Button>
           <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
             <DialogTrigger asChild>
@@ -529,20 +529,20 @@ export default function QuestionBankPage({
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                Import CSV
+                Nhập CSV
               </Button>
             </DialogTrigger>
             <DialogContent>
               <form onSubmit={handleImportFile}>
                 <DialogHeader>
-                  <DialogTitle>Import Questions</DialogTitle>
+                  <DialogTitle>Nhập câu hỏi</DialogTitle>
                   <DialogDescription>
                     Upload a CSV or Excel file to bulk-import questions. All imported questions
-                    will be set to <strong>Approved</strong>. The file must include columns:{" "}
+                    sẽ được đặt thành <strong>Đã duyệt</strong>. Tệp phải bao gồm các cột:{" "}
                     <code>type</code>, <code>prompt</code>, <code>options</code>{" "}
-                    (MCQ only), <code>correct_option_index</code> (MCQ only),{" "}
-                    <code>correct_answer</code> (short answer / formula),{" "}
-                    <code>variables</code> (calculation only), and optionally{" "}
+                    (chỉ MCQ), <code>correct_option_index</code> (chỉ MCQ),{" "}
+                    <code>correct_answer</code> (câu trả lời ngắn / công thức),{" "}
+                    <code>variables</code> (chỉ câu tính toán), và tùy chọn{" "}
                     <code>explanation</code>.
                   </DialogDescription>
                 </DialogHeader>
@@ -559,7 +559,7 @@ export default function QuestionBankPage({
                     required
                   />
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Supported formats: .csv, .xlsx, .xls
+                    Định dạng được hỗ trợ: .csv, .xlsx, .xls
                   </p>
                 </div>
                 <DialogFooter>
@@ -571,10 +571,10 @@ export default function QuestionBankPage({
                       setImportFile(null);
                     }}
                   >
-                    Cancel
+                    Hủy
                   </Button>
                   <Button type="submit" disabled={isImporting || !importFile}>
-                    {isImporting ? "Importing..." : "Import"}
+                    {isImporting ? "Đang nhập..." : "Nhập"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -597,20 +597,20 @@ export default function QuestionBankPage({
                 >
                   <path d="M12 5v14M5 12h14" />
                 </svg>
-                Add Question
+                Thêm câu hỏi
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <form onSubmit={handleAddQuestion}>
                 <DialogHeader>
-                  <DialogTitle>Add New Question</DialogTitle>
+                  <DialogTitle>Thêm câu hỏi mới</DialogTitle>
                   <DialogDescription>
-                    Create a new question manually
+                    Tạo câu hỏi mới thủ công
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label htmlFor="q-type">Question Type</Label>
+                    <Label htmlFor="q-type">Dạng câu hỏi</Label>
                     <select
                       id="q-type"
                       className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -619,21 +619,21 @@ export default function QuestionBankPage({
                         setQuestionForm({ ...questionForm, type: e.target.value as QuestionType })
                       }
                     >
-                      <option value="MCQ">Multiple Choice (MCQ)</option>
-                      <option value="SHORT_ANSWER">Short Answer</option>
-                      <option value="CALCULATION">Calculation</option>
+                      <option value="MCQ">Trắc nghiệm (MCQ)</option>
+                      <option value="SHORT_ANSWER">Trả lời ngắn</option>
+                      <option value="CALCULATION">Tính toán</option>
                     </select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="q-prompt">
                       {questionForm.type === "CALCULATION"
-                        ? "Prompt Template"
-                        : "Question Prompt"}
+                        ? "Mẫu câu hỏi"
+                        : "Nội dung câu hỏi"}
                     </Label>
                     <Textarea
                       id="q-prompt"
-                      placeholder="Enter your question..."
+                      placeholder="Nhập câu hỏi của bạn..."
                       rows={3}
                       value={
                         questionForm.type === "CALCULATION"
@@ -657,7 +657,7 @@ export default function QuestionBankPage({
                   {questionForm.type === "MCQ" && (
                     <>
                       <div className="space-y-2">
-                        <Label>Options</Label>
+                        <Label>Các đáp án</Label>
                         {questionForm.options.map((opt, idx) => (
                           <div key={idx} className="flex items-center gap-2">
                             <input
@@ -693,7 +693,7 @@ export default function QuestionBankPage({
                             })
                           }
                         >
-                          Add Option
+                          Thêm đáp án
                         </Button>
                       </div>
                     </>
@@ -701,7 +701,7 @@ export default function QuestionBankPage({
 
                   {questionForm.type === "SHORT_ANSWER" && (
                     <div className="space-y-2">
-                      <Label htmlFor="correct-answer">Correct Answer</Label>
+                      <Label htmlFor="correct-answer">Đáp án đúng</Label>
                       <Input
                         id="correct-answer"
                         value={questionForm.correctAnswer}
@@ -719,7 +719,7 @@ export default function QuestionBankPage({
                   {questionForm.type === "CALCULATION" && (
                     <>
                       <div className="space-y-2">
-                        <Label htmlFor="formula">Answer Formula</Label>
+                        <Label htmlFor="formula">Công thức đáp án</Label>
                         <Input
                           id="formula"
                           placeholder="e.g., (a - b) / a * 100"
@@ -735,7 +735,7 @@ export default function QuestionBankPage({
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="variables">
-                          Variables (name, min, max, decimals per line)
+                          Biến (tên, min, max, số thập phân, mỗi dòng một biến)
                         </Label>
                         <Textarea
                           id="variables"
@@ -755,10 +755,10 @@ export default function QuestionBankPage({
                   )}
 
                   <div className="space-y-2">
-                    <Label htmlFor="explanation">Explanation (optional)</Label>
+                    <Label htmlFor="explanation">Giải thích (không bắt buộc)</Label>
                     <Textarea
                       id="explanation"
-                      placeholder="Explanation for the correct answer..."
+                      placeholder="Giải thích cho đáp án đúng..."
                       rows={2}
                       value={questionForm.explanation}
                       onChange={(e) =>
@@ -776,10 +776,10 @@ export default function QuestionBankPage({
                       resetForm();
                     }}
                   >
-                    Cancel
+                    Hủy
                   </Button>
                   <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Adding..." : "Add Question"}
+                    {isSubmitting ? "Đang thêm..." : "Thêm câu hỏi"}
                   </Button>
                 </DialogFooter>
               </form>
@@ -791,13 +791,13 @@ export default function QuestionBankPage({
       <Tabs defaultValue="flagged" className="space-y-4">
         <TabsList>
           <TabsTrigger value="flagged">
-            Needs Review ({flaggedQuestions.length})
+            Cần xem xét ({flaggedQuestions.length})
           </TabsTrigger>
           <TabsTrigger value="draft">
-            Draft ({draftQuestions.length})
+            Bản nháp ({draftQuestions.length})
           </TabsTrigger>
           <TabsTrigger value="approved">
-            Approved ({approvedQuestions.length})
+            Đã duyệt ({approvedQuestions.length})
           </TabsTrigger>
         </TabsList>
 
@@ -810,7 +810,7 @@ export default function QuestionBankPage({
             {tab.questions.length === 0 ? (
               <Card className="flex flex-col items-center justify-center py-8">
                 <p className="text-muted-foreground">
-                  No {tab.key === "flagged" ? "questions need review" : tab.key === "draft" ? "draft questions" : "approved questions"}
+                  No {tab.key === "flagged" ? "câu hỏi nào cần xem xét" : tab.key === "draft" ? "câu hỏi nháp nào" : "câu hỏi đã duyệt nào"}
                 </p>
               </Card>
             ) : (
@@ -835,13 +835,13 @@ export default function QuestionBankPage({
                             <div className="mt-4 space-y-2 text-sm">
                               {question.content.explanation && (
                                 <p className="text-muted-foreground">
-                                  <strong>Explanation:</strong>{" "}
+                                  <strong>Giải thích:</strong>{" "}
                                   {String(question.content.explanation)}
                                 </p>
                               )}
                               {Array.isArray(question.content.options) && (
                                 <div>
-                                  <strong>Options:</strong>
+                                  <strong>Các đáp án:</strong>
                                   <ul className="ml-4 mt-1 space-y-1">
                                     {(question.content.options as string[]).map(
                                       (opt: string, i: number) => (
@@ -864,7 +864,7 @@ export default function QuestionBankPage({
                               )}
                               {question.content.correctAnswer && (
                                 <p className="text-green-600">
-                                  <strong>Correct Answer:</strong>{" "}
+                                  <strong>Đáp án đúng:</strong>{" "}
                                   {String(question.content.correctAnswer)}
                                 </p>
                               )}
@@ -881,7 +881,7 @@ export default function QuestionBankPage({
                               )
                             }
                           >
-                            {expandedQuestion === question.id ? "Less" : "More"}
+                            {expandedQuestion === question.id ? "Thu gọn" : "Mở rộng"}
                           </Button>
                           {tab.key !== "approved" && (
                             <Button
@@ -891,7 +891,7 @@ export default function QuestionBankPage({
                                 handleUpdateStatus(question.id, "APPROVED")
                               }
                             >
-                              Approve
+                              Duyệt
                             </Button>
                           )}
                           {tab.key === "flagged" && (
@@ -902,7 +902,7 @@ export default function QuestionBankPage({
                                 handleUpdateStatus(question.id, "DRAFT")
                               }
                             >
-                              Reset to Draft
+                              Đặt lại về Nháp
                             </Button>
                           )}
                           <Button
@@ -910,7 +910,7 @@ export default function QuestionBankPage({
                             size="sm"
                             onClick={() => handleDeleteQuestion(question.id)}
                           >
-                            Delete
+                            Xóa
                           </Button>
                         </div>
                       </div>

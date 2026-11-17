@@ -25,7 +25,7 @@ export async function PATCH(req: NextRequest) {
     });
 
     if (existingUser) {
-      throw new ConflictError("Email already in use");
+      throw new ConflictError("Email này đã được sử dụng");
     }
 
     const user = await prisma.user.update({

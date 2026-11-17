@@ -22,16 +22,16 @@ export async function POST(req: NextRequest) {
     const { classId, fileName, url } = body;
 
     if (!classId) {
-      throw new ValidationError("classId is required");
+      throw new ValidationError("Cần có classId");
     }
     if (!url) {
-      throw new ValidationError("url is required");
+      throw new ValidationError("Cần có url");
     }
     if (!fileName) {
-      throw new ValidationError("fileName is required");
+      throw new ValidationError("Cần có fileName");
     }
     if (!fileName.toLowerCase().endsWith(".pdf")) {
-      throw new ValidationError("Only PDF files are allowed");
+      throw new ValidationError("Chỉ cho phép tệp PDF");
     }
 
     const material = await createMaterialFromBlob(classId, session.userId, {

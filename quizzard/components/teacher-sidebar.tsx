@@ -24,7 +24,7 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
     }
   }
 
-  const initial = teacherName?.charAt(0).toUpperCase() || "T";
+  const initial = teacherName?.charAt(0).toUpperCase() || "G";
 
   return (
     <aside className="w-64 shrink-0 border-r bg-sidebar text-sidebar-foreground flex flex-col h-screen">
@@ -44,7 +44,7 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
           </svg>
-          My Classes
+          Lớp của tôi
         </a>
         <a
           href="/teacher/analytics"
@@ -74,7 +74,7 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
           {avatarUrl ? (
             <img
               src={avatarUrl}
-              alt={teacherName || "Avatar"}
+              alt={teacherName || "Ảnh đại diện"}
               className="w-9 h-9 rounded-full object-cover"
             />
           ) : (
@@ -83,8 +83,8 @@ export function TeacherSidebar({ teacherName, avatarUrl }: TeacherSidebarProps) 
             </div>
           )}
           <div className="leading-tight">
-            <p className="text-sm font-medium text-sidebar-foreground">{teacherName || "Teacher"}</p>
-            <p className="text-xs text-sidebar-foreground/60">Teacher</p>
+            <p className="text-sm font-medium text-sidebar-foreground">{teacherName || "Giáo viên"}</p>
+            <p className="text-xs text-sidebar-foreground/60">Giáo viên</p>
           </div>
         </div>
         <button

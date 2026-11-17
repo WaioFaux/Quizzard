@@ -41,8 +41,8 @@ export default function LoginPage() {
       if (!res.ok) {
         toast({
           variant: "destructive",
-          title: "Login failed",
-          description: data.error || "Invalid email or password",
+          title: "Đăng nhập thất bại",
+          description: data.error || "Email hoặc mật khẩu không đúng",
         });
         return;
       }
@@ -57,8 +57,8 @@ export default function LoginPage() {
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi. Vui lòng thử lại.",
       });
     } finally {
       setIsLoading(false);
@@ -69,10 +69,10 @@ export default function LoginPage() {
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center">
-          Welcome back
+          Chào mừng trở lại
         </CardTitle>
         <CardDescription className="text-center">
-          Enter your email to sign in to your account
+          Nhập email của bạn để đăng nhập vào tài khoản
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -83,18 +83,18 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="ban@example.com"
               required
               disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Mật khẩu</Label>
             <Input
               id="password"
               name="password"
               type="password"
-              placeholder="Your password"
+              placeholder="Mật khẩu của bạn"
               required
               disabled={isLoading}
             />
@@ -102,15 +102,15 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
           </Button>
           <p className="text-sm text-center text-muted-foreground">
-            Don&apos;t have an account?{" "}
+            Chưa có tài khoản?{" "}
             <Link
               href="/signup"
               className="text-primary font-medium hover:underline"
             >
-              Sign up
+              Đăng ký
             </Link>
           </p>
         </CardFooter>

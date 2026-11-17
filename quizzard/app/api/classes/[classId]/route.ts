@@ -36,7 +36,7 @@ export async function PUT(
 
     if (session.role !== "TEACHER") {
       return Response.json(
-        { error: "Only teachers can update classes", code: "FORBIDDEN" },
+        { error: "Chỉ giáo viên mới có thể cập nhật lớp", code: "FORBIDDEN" },
         { status: 403 }
       );
     }
@@ -67,7 +67,7 @@ export async function DELETE(
 
     if (session.role !== "TEACHER") {
       return Response.json(
-        { error: "Only teachers can delete classes", code: "FORBIDDEN" },
+        { error: "Chỉ giáo viên mới có thể xóa lớp", code: "FORBIDDEN" },
         { status: 403 }
       );
     }

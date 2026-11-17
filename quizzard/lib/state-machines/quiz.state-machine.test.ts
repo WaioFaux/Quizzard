@@ -9,16 +9,16 @@ describe("Quiz State Machine", () => {
 
   it("should throw on PUBLISHED to DRAFT transition", () => {
     expect(() => transitionQuiz(QuizStatus.PUBLISHED, QuizStatus.DRAFT))
-      .toThrow("Illegal Quiz transition from PUBLISHED to DRAFT");
+      .toThrow("Chuyển trạng thái Quiz không hợp lệ từ PUBLISHED sang DRAFT");
   });
 
   it("should throw on DRAFT to any other status", () => {
     expect(() => transitionQuiz(QuizStatus.DRAFT, QuizStatus.DRAFT as never))
-      .toThrow("Illegal Quiz transition");
+      .toThrow("Chuyển trạng thái Quiz không hợp lệ");
   });
 
   it("should throw on invalid from state", () => {
     expect(() => transitionQuiz("INVALID" as never, QuizStatus.PUBLISHED))
-      .toThrow("Illegal Quiz transition");
+      .toThrow("Chuyển trạng thái Quiz không hợp lệ");
   });
 });

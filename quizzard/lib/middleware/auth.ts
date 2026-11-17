@@ -26,7 +26,7 @@ function _getSessionPassword(): string {
   if (!secret) {
     throw new Error(
       "SESSION_SECRET environment variable is not set. " +
-      "Please set it to a secure random string of at least 32 characters in your .env file."
+      "Vui lòng đặt thành một chuỗi ngẫu nhiên an toàn dài ít nhất 32 ký tự trong tệp .env của bạn."
     );
   }
   return secret;
@@ -53,7 +53,7 @@ export async function requireAuth() {
   const session = await getSession();
 
   if (!session?.userId) {
-    throw new AuthorizationError("Login required");
+    throw new AuthorizationError("Cần đăng nhập");
   }
 
   return session as SessionData;
@@ -63,7 +63,11 @@ export async function requireRole(role: Role) {
   const session = await requireAuth();
 
   if (session.role !== role) {
-    throw new AuthorizationError(`${role.toLowerCase()} access required`);
+    throw new AuthorizationError(
+      role === Role.TEACHER
+        ? "Chỉ giáo viên mới có quyền truy cập"
+        : "Chỉ học sinh mới có quyền truy cập"
+    );
   }
 
   return session;

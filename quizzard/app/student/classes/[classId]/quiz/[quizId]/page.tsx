@@ -81,7 +81,7 @@ export default function QuizIntroPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to start quiz");
+        throw new Error(data.error || "Không thể bắt đầu bài kiểm tra");
       }
 
       router.push(
@@ -89,8 +89,11 @@ export default function QuizIntroPage({
       );
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to start quiz",
+        title: "Lỗi",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Không thể bắt đầu bài kiểm tra",
         variant: "destructive",
       });
     } finally {
@@ -99,9 +102,9 @@ export default function QuizIntroPage({
   }
 
   function formatDeadline(deadline: string | null) {
-    if (!deadline) return "No deadline";
+    if (!deadline) return "Không hạn chót";
     const date = new Date(deadline);
-    return date.toLocaleDateString(undefined, {
+    return date.toLocaleDateString("vi-VN", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -132,12 +135,12 @@ export default function QuizIntroPage({
     return (
       <div className="p-6">
         <Card className="flex flex-col items-center justify-center py-12">
-          <h3 className="text-lg font-semibold mb-2">Quiz not available</h3>
+          <h3 className="text-lg font-semibold mb-2">Bài kiểm tra không khả dụng</h3>
           <p className="text-muted-foreground mb-4">
-            This quiz may not be published yet
+            Bài kiểm tra này có thể chưa được công bố
           </p>
           <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
-            Back to Class
+            Quay lại lớp
           </Button>
         </Card>
       </div>
@@ -166,7 +169,7 @@ export default function QuizIntroPage({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          {quiz?.lecture.class.name || "Class"}
+          {quiz?.lecture.class.name || "Lớp"}
         </Button>
       </div>
 
@@ -174,13 +177,13 @@ export default function QuizIntroPage({
         <Card>
           <CardHeader className="text-center">
             <Badge variant="secondary" className="w-fit mx-auto mb-4">
-              {quiz?.lecture?.title || "Quiz"}
+              {quiz?.lecture?.title || "Bài kiểm tra"}
             </Badge>
             <CardTitle className="text-3xl mb-2">
-              {quiz?.lecture?.title || "Quiz"}
+              {quiz?.lecture?.title || "Bài kiểm tra"}
             </CardTitle>
             <CardDescription className="text-base">
-              {quiz?.lecture?.class?.name || "Class"}
+              {quiz?.lecture?.class?.name || "Lớp"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -189,34 +192,34 @@ export default function QuizIntroPage({
                 <div className="grid grid-cols-3 gap-4 py-4 border-y">
                   <div className="text-center">
                     <p className="text-2xl font-bold">{quiz.questionsPerAttempt}</p>
-                    <p className="text-sm text-muted-foreground">Questions</p>
+                    <p className="text-sm text-muted-foreground">Câu hỏi</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold">{quiz.timeLimitMinutes}</p>
-                    <p className="text-sm text-muted-foreground">Minutes</p>
+                    <p className="text-sm text-muted-foreground">Phút</p>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-medium">
                       {isDeadlinePassed(quiz.deadline) ? (
-                        <span className="text-red-500">Expired</span>
+                        <span className="text-red-500">Đã hết hạn</span>
                       ) : (
-                        "Available"
+                        "Đang mở"
                       )}
                     </p>
-                    <p className="text-sm text-muted-foreground">Status</p>
+                    <p className="text-sm text-muted-foreground">Trạng thái</p>
                   </div>
                 </div>
 
                 {quiz.deadline && (
                   <div className="text-center">
-                    <p className="text-sm text-muted-foreground">Deadline</p>
+                    <p className="text-sm text-muted-foreground">Hạn chót</p>
                     <p className="font-medium">{formatDeadline(quiz.deadline)}</p>
                   </div>
                 )}
 
                 {quiz.instructions && (
                   <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-sm font-medium mb-2">Instructions:</p>
+                    <p className="text-sm font-medium mb-2">Hướng dẫn:</p>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                       {quiz.instructions}
                     </p>
@@ -225,13 +228,13 @@ export default function QuizIntroPage({
 
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                   <p className="text-sm font-medium text-amber-800 mb-2">
-                    Before you start:
+                    Trước khi bắt đầu:
                   </p>
                   <ul className="text-sm text-amber-700 space-y-1 list-disc list-inside">
-                    <li>Make sure you have a stable internet connection</li>
-                    <li>You have {quiz.timeLimitMinutes} minutes to complete the quiz</li>
-                    <li>The quiz will auto-submit when time is up</li>
-                    <li>Your answers are saved automatically</li>
+                    <li>Hãy đảm bảo kết nối internet của bạn ổn định</li>
+                    <li>Bạn có {quiz.timeLimitMinutes} phút để hoàn thành bài kiểm tra</li>
+                    <li>Bài kiểm tra sẽ tự động nộp khi hết thời gian</li>
+                    <li>Câu trả lời của bạn được lưu tự động</li>
                   </ul>
                 </div>
               </>
@@ -243,7 +246,7 @@ export default function QuizIntroPage({
                 className="flex-1"
                 onClick={() => router.push(`/student/classes/${classId}`)}
               >
-                Back to Class
+                Quay lại lớp
               </Button>
               {existingAttemptId ? (
                 <Button
@@ -254,7 +257,7 @@ export default function QuizIntroPage({
                     )
                   }
                 >
-                  View Results
+                  Xem kết quả
                 </Button>
               ) : quiz && !isDeadlinePassed(quiz.deadline) ? (
                 <Button
@@ -262,11 +265,11 @@ export default function QuizIntroPage({
                   onClick={handleStartQuiz}
                   disabled={isStarting}
                 >
-                  {isStarting ? "Starting..." : "Start Quiz"}
+                  {isStarting ? "Đang bắt đầu..." : "Bắt đầu"}
                 </Button>
               ) : (
                 <Button className="flex-1" disabled>
-                  Deadline Passed
+                  Đã quá hạn
                 </Button>
               )}
             </div>

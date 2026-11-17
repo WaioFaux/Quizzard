@@ -14,10 +14,10 @@ export async function createLecture(
   // Verify class ownership
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   // Get next order number
@@ -84,11 +84,11 @@ export async function getLecture(lectureId: string, teacherId: string) {
   });
 
   if (!lecture) {
-    throw new NotFoundError("Lecture");
+    throw new NotFoundError("Buổi giảng");
   }
 
   if (lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this lecture");
+    throw new AuthorizationError("Bạn không sở hữu buổi giảng này");
   }
 
   return lecture;
@@ -97,10 +97,10 @@ export async function getLecture(lectureId: string, teacherId: string) {
 export async function listLectures(classId: string, teacherId: string) {
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   return prisma.lecture.findMany({
@@ -144,11 +144,11 @@ export async function updateLecture(
   });
 
   if (!lecture) {
-    throw new NotFoundError("Lecture");
+    throw new NotFoundError("Buổi giảng");
   }
 
   if (lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this lecture");
+    throw new AuthorizationError("Bạn không sở hữu buổi giảng này");
   }
 
   // If changing order, check for conflicts
@@ -162,7 +162,7 @@ export async function updateLecture(
     });
     if (conflict) {
       throw new AuthorizationError(
-        `A lecture with order ${input.order} already exists in this class`
+        `Một buổi giảng với thứ tự ${input.order} đã tồn tại trong lớp này`
       );
     }
   }
@@ -194,11 +194,11 @@ export async function deleteLecture(lectureId: string, teacherId: string) {
   });
 
   if (!lecture) {
-    throw new NotFoundError("Lecture");
+    throw new NotFoundError("Buổi giảng");
   }
 
   if (lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this lecture");
+    throw new AuthorizationError("Bạn không sở hữu buổi giảng này");
   }
 
   // Delete associated quiz (cascade will handle attempts, answers, reports)
@@ -238,11 +238,11 @@ export async function proposeLecturesFromMaterial(
   });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   const material = await prisma.material.findUnique({
@@ -250,12 +250,12 @@ export async function proposeLecturesFromMaterial(
   });
 
   if (!material) {
-    throw new NotFoundError("Material");
+    throw new NotFoundError("Tài liệu");
   }
 
   // Check if material has been processed
   if (material.status !== "PROCESSED" || !material.extractedText) {
-    throw new Error("Material is still being processed or has no extracted text");
+    throw new Error("Tài liệu vẫn đang được xử lý hoặc chưa có nội dung trích xuất");
   }
 
   // Call Gemini API to propose lectures
@@ -275,11 +275,11 @@ export async function createLecturesFromProposals(
   });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   const results = [];

@@ -51,14 +51,14 @@ export default function StudentLeaderboardPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to load leaderboard");
+        throw new Error(data.error || "Không thể tải bảng xếp hạng");
       }
 
       setLeaderboard(data.data || []);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load leaderboard",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tải bảng xếp hạng",
         variant: "destructive",
       });
     } finally {
@@ -104,8 +104,8 @@ export default function StudentLeaderboardPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Leaderboard</h1>
-          <p className="text-muted-foreground">See how you rank against other students</p>
+          <h1 className="text-2xl font-bold">Bảng xếp hạng</h1>
+          <p className="text-muted-foreground">Xem thứ hạng của bạn so với các học sinh khác</p>
         </div>
         {classId && (
           <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
@@ -123,7 +123,7 @@ export default function StudentLeaderboardPage() {
             >
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            Back to Class
+            Quay lại lớp
           </Button>
         )}
       </div>
@@ -144,9 +144,9 @@ export default function StudentLeaderboardPage() {
           >
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
-          <h3 className="text-lg font-semibold mb-2">No quiz selected</h3>
+          <h3 className="text-lg font-semibold mb-2">Chưa chọn bài kiểm tra</h3>
           <p className="text-muted-foreground text-center max-w-sm">
-            Select a quiz from a class to view the leaderboard
+            Chọn một bài kiểm tra trong lớp để xem bảng xếp hạng
           </p>
         </Card>
       ) : leaderboard.length === 0 ? (
@@ -165,9 +165,9 @@ export default function StudentLeaderboardPage() {
           >
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
-          <h3 className="text-lg font-semibold mb-2">No results yet</h3>
+          <h3 className="text-lg font-semibold mb-2">Chưa có kết quả</h3>
           <p className="text-muted-foreground text-center max-w-sm">
-            Be the first to complete the quiz and top the leaderboard!
+            Hãy là người đầu tiên hoàn thành bài kiểm tra và đứng đầu bảng xếp hạng!
           </p>
           {classId && (
             <Button
@@ -175,7 +175,7 @@ export default function StudentLeaderboardPage() {
               className="mt-4"
               onClick={() => router.push(`/student/classes/${classId}`)}
             >
-              Take Quiz
+              Làm bài
             </Button>
           )}
         </Card>
@@ -193,7 +193,7 @@ export default function StudentLeaderboardPage() {
                   {leaderboard[1].studentName}
                 </p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[1].score)}`}>
-                  {leaderboard[1].score} pts
+                  {leaderboard[1].score} điểm
                 </p>
                 <div className="w-20 h-16 bg-gray-300 rounded-t-lg flex items-center justify-center text-2xl">
                   🥈
@@ -209,7 +209,7 @@ export default function StudentLeaderboardPage() {
                   {leaderboard[0].studentName}
                 </p>
                 <p className={`text-2xl font-bold ${getScoreColor(leaderboard[0].score)}`}>
-                  {leaderboard[0].score} pts
+                  {leaderboard[0].score} điểm
                 </p>
                 <div className="w-24 h-20 bg-amber-400 rounded-t-lg flex items-center justify-center text-3xl">
                   🥇
@@ -225,7 +225,7 @@ export default function StudentLeaderboardPage() {
                   {leaderboard[2].studentName}
                 </p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[2].score)}`}>
-                  {leaderboard[2].score} pts
+                  {leaderboard[2].score} điểm
                 </p>
                 <div className="w-20 h-12 bg-amber-600 rounded-t-lg flex items-center justify-center text-2xl">
                   🥉
@@ -237,9 +237,9 @@ export default function StudentLeaderboardPage() {
           {/* Full Rankings */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">All Rankings</CardTitle>
+              <CardTitle className="text-lg">Bảng xếp hạng đầy đủ</CardTitle>
               <CardDescription>
-                {leaderboard.length} student{leaderboard.length !== 1 ? "s" : ""} completed this quiz
+                {leaderboard.length} học sinh đã hoàn thành bài kiểm tra này
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -276,13 +276,13 @@ export default function StudentLeaderboardPage() {
                               {entry.studentName}
                               {isCurrentUser && (
                                 <Badge variant="secondary" className="text-xs">
-                                  You
+                                  Bạn
                                 </Badge>
                               )}
                             </p>
                             {entry.submittedAt && (
                               <p className="text-xs text-muted-foreground">
-                                {new Date(entry.submittedAt).toLocaleString()}
+                                {new Date(entry.submittedAt).toLocaleString("vi-VN")}
                               </p>
                             )}
                           </div>
@@ -290,7 +290,7 @@ export default function StudentLeaderboardPage() {
                       </div>
                       <div className="text-right">
                         <p className={`text-xl font-bold ${getScoreColor(entry.score)}`}>
-                          {entry.score} pts
+                          {entry.score} điểm
                         </p>
                       </div>
                     </div>

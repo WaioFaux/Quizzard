@@ -37,8 +37,9 @@ export async function GET(req: NextRequest) {
           },
         },
       },
+      // StudentAttempt has no createdAt column; startedAt is the creation timestamp.
       orderBy: {
-        createdAt: "desc",
+        startedAt: "desc",
       },
     });
 
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       const retryAfterMs = (err as { retryAfterMs: number }).retryAfterMs;
       const retryAfterSec = Math.ceil(retryAfterMs / 1000);
       return Response.json(
-        { error: "Too many attempts. Please try again later." },
+        { error: "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau." },
         { status: 429, headers: { "Retry-After": String(retryAfterSec) } }
       );
     }

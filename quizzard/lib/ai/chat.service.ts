@@ -60,11 +60,11 @@ async function loadOwnedMaterial(teacherId: string, materialId: string) {
   });
 
   if (!material) {
-    throw new NotFoundError("Material");
+    throw new NotFoundError("Tài liệu");
   }
 
   if (material.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not have access to this material");
+    throw new AuthorizationError("Bạn không có quyền truy cập tài liệu này");
   }
 
   return material;
@@ -175,7 +175,7 @@ export async function startChatSession(
       status: material.status,
     });
     throw new ValidationError(
-      "This material is still being processed. Wait for processing to finish before planning lectures."
+      "Tài liệu này vẫn đang được xử lý. Vui lòng đợi xử lý xong trước khi lập kế hoạch buổi giảng."
     );
   }
 
@@ -256,7 +256,7 @@ export async function confirmLecturePlan(
   });
 
   if (proposals.length === 0) {
-    throw new ValidationError("No lecture proposals available to confirm");
+    throw new ValidationError("Không có đề xuất buổi giảng nào để xác nhận");
   }
 
   const aiSettings = getAISettings(headers);
@@ -275,7 +275,7 @@ export async function confirmLecturePlan(
 
   if (lectures.length === 0) {
     throw new ValidationError(
-      "The AI did not return any usable lectures for this plan. Please try again."
+      "AI không trả về buổi giảng nào dùng được cho kế hoạch này. Vui lòng thử lại."
     );
   }
 
@@ -295,7 +295,7 @@ export async function confirmLecturePlan(
   return {
     response:
       aiResponse.message ||
-      "Your lecture plan has been confirmed! Lectures have been created.",
+      "Kế hoạch buổi giảng đã được xác nhận! Các buổi giảng đã được tạo.",
     proposals,
     readyToConfirm: false,
     lectures,
@@ -313,7 +313,7 @@ export function updateProposals(
   const normalized = normalizeProposals(proposals);
 
   if (normalized.length === 0) {
-    throw new ValidationError("At least one valid lecture proposal is required");
+    throw new ValidationError("Cần ít nhất một đề xuất buổi giảng hợp lệ");
   }
 
   return { proposals: normalized };

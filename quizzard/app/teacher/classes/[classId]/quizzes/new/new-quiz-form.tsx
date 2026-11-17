@@ -75,8 +75,8 @@ export function NewQuizForm({
         });
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load lectures",
+          title: "Lỗi",
+          description: "Không thể tải danh sách buổi giảng",
           variant: "destructive",
         });
       } finally {
@@ -123,21 +123,21 @@ export function NewQuizForm({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create quiz");
+        throw new Error(data.error || "Không thể tạo bài kiểm tra");
       }
 
       const data = await res.json();
 
       toast({
-        title: "Success",
-        description: "Quiz created. Configure it, generate the question bank, then publish.",
+        title: "Thành công",
+        description: "Đã tạo bài kiểm tra. Hãy cấu hình, tạo ngân hàng câu hỏi rồi xuất bản.",
       });
 
       router.push(`/teacher/classes/${classId}/quizzes/${data.data.id}`);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create quiz",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tạo bài kiểm tra",
         variant: "destructive",
       });
     } finally {
@@ -176,48 +176,48 @@ export function NewQuizForm({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          {className || "Classes"}
+          {className || "Lớp"}
         </Button>
       </div>
-      <h1 className="text-2xl font-bold mb-1">Create Quiz</h1>
+      <h1 className="text-2xl font-bold mb-1">Tạo bài kiểm tra</h1>
       <p className="text-muted-foreground mb-6">
-        A quiz is tied to one lecture. Set the rules here, then generate the
-        question bank and publish.
+        Mỗi bài kiểm tra gắn với một buổi giảng. Hãy thiết lập quy tắc tại đây,
+        sau đó tạo ngân hàng câu hỏi và xuất bản.
       </p>
 
       <div className="max-w-2xl">
         <Card>
           <CardHeader>
-            <CardTitle>Quiz Setup</CardTitle>
+            <CardTitle>Thiết lập bài kiểm tra</CardTitle>
             <CardDescription>
-              The lecture you pick will get one draft quiz. You can change the
-              settings any time before publishing.
+              Buổi giảng bạn chọn sẽ có một bài kiểm tra nháp. Bạn có thể thay đổi
+              cài đặt bất kỳ lúc nào trước khi xuất bản.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {lectures.length === 0 ? (
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  This class has no lectures yet. Add a lecture first, then create
-                  its quiz.
+                  Lớp này chưa có buổi giảng nào. Hãy thêm buổi giảng trước,
+                  rồi tạo bài kiểm tra cho buổi đó.
                 </p>
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/teacher/classes/${classId}`)}
                 >
-                  Back to Class
+                  Quay lại lớp
                 </Button>
               </div>
             ) : (
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="lecture">Lecture</Label>
+                  <Label htmlFor="lecture">Buổi giảng</Label>
                   <Select
                     value={selectedLectureId}
                     onValueChange={setSelectedLectureId}
                   >
                     <SelectTrigger id="lecture">
-                      <SelectValue placeholder="Select a lecture" />
+                      <SelectValue placeholder="Chọn một buổi giảng" />
                     </SelectTrigger>
                     <SelectContent>
                       {lectures.map((lecture) => (
@@ -227,7 +227,7 @@ export function NewQuizForm({
                           disabled={!!lecture.quiz}
                         >
                           {lecture.order}. {lecture.title}
-                          {lecture.quiz ? " (already has a quiz)" : ""}
+                          {lecture.quiz ? " (đã có bài kiểm tra)" : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -236,7 +236,7 @@ export function NewQuizForm({
 
                 {existingQuizId && (
                   <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm">
-                    <p className="font-medium">This lecture already has a quiz.</p>
+                    <p className="font-medium">Buổi giảng này đã có bài kiểm tra.</p>
                     <Button
                       variant="link"
                       className="h-auto p-0"
@@ -246,31 +246,30 @@ export function NewQuizForm({
                         )
                       }
                     >
-                      Open the existing quiz
+                      Mở bài kiểm tra hiện có
                     </Button>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="instructions">AI Instructions</Label>
+                  <Label htmlFor="instructions">Hướng dẫn cho AI</Label>
                   <Textarea
                     id="instructions"
                     rows={6}
-                    placeholder="Describe what topics, difficulty level, and question types you want..."
+                    placeholder="Mô tả các chủ đề, độ khó và dạng câu hỏi mà bạn muốn..."
                     value={instructions}
                     onChange={(e) => setInstructions(e.target.value)}
                     required
                   />
                   <p className="text-xs text-muted-foreground">
-                    Instructions for the AI when generating questions. Be specific
-                    about topics to cover, difficulty level, and preferred question
-                    types.
+                    Hướng dẫn cho AI khi tạo câu hỏi. Hãy nêu rõ chủ đề cần đề cập,
+                    độ khó và dạng câu hỏi ưu tiên.
                   </p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="questions">Questions per Attempt</Label>
+                    <Label htmlFor="questions">Số câu hỏi mỗi lượt làm bài</Label>
                     <Input
                       id="questions"
                       type="number"
@@ -282,11 +281,11 @@ export function NewQuizForm({
                       }
                     />
                     <p className="text-xs text-muted-foreground">
-                      The question bank will be 5x this size.
+                      Ngân hàng câu hỏi sẽ gấp 5 lần số lượng này.
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="timelimit">Time Limit (minutes)</Label>
+                    <Label htmlFor="timelimit">Thời gian làm bài (phút)</Label>
                     <Input
                       id="timelimit"
                       type="number"
@@ -301,7 +300,7 @@ export function NewQuizForm({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="deadline">Deadline (optional)</Label>
+                  <Label htmlFor="deadline">Hạn chót (không bắt buộc)</Label>
                   <Input
                     id="deadline"
                     type="datetime-local"
@@ -309,21 +308,21 @@ export function NewQuizForm({
                     onChange={(e) => setDeadline(e.target.value)}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Last moment a student may start an attempt. You can also set it
-                    when publishing.
+                    Thời điểm cuối cùng học sinh có thể bắt đầu làm bài. Bạn cũng có thể
+                    đặt khi xuất bản.
                   </p>
                 </div>
 
                 <div className="flex gap-2">
                   <Button type="submit" disabled={isSubmitting || !!existingQuizId}>
-                    {isSubmitting ? "Creating..." : "Create Quiz"}
+                    {isSubmitting ? "Đang tạo..." : "Tạo bài kiểm tra"}
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => router.push(`/teacher/classes/${classId}`)}
                   >
-                    Cancel
+                    Hủy
                   </Button>
                 </div>
               </form>

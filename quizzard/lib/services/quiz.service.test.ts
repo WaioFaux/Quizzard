@@ -93,7 +93,7 @@ describe("Quiz Service (mocked)", () => {
           questionsPerAttempt: 5,
           timeLimitMinutes: 30,
         })
-      ).rejects.toThrow("already has a quiz");
+      ).rejects.toThrow("đã có bài kiểm tra");
     });
 
     it("should create a quiz successfully", async () => {
@@ -231,7 +231,7 @@ describe("Quiz Service (mocked)", () => {
       const { publishQuiz } = await import("../services/quiz.service");
 
       await expect(publishQuiz("quiz-1", "teacher-1")).rejects.toThrow(
-        "All questions must be approved"
+        "Tất cả câu hỏi phải được duyệt"
       );
     });
 
@@ -301,7 +301,7 @@ describe("Quiz Service (mocked)", () => {
 
       await expect(
         extendDeadline("quiz-1", "teacher-1", "2026-09-01T00:00:00Z")
-      ).rejects.toThrow("Cannot shorten existing deadline");
+      ).rejects.toThrow("Không thể rút ngắn hạn chót");
     });
 
     it("should allow extending deadline", async () => {

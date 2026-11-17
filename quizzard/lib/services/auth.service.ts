@@ -25,7 +25,7 @@ export async function createUser(
   });
 
   if (existing) {
-    throw new ConflictError("Email already registered");
+    throw new ConflictError("Email này đã được đăng ký");
   }
 
   const passwordHash = await hashPassword(input.password);

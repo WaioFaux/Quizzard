@@ -33,16 +33,16 @@ interface GenerationStep {
 
 const TYPE_META: Record<QuestionType, { label: string; description: string }> = {
   MCQ: {
-    label: "Multiple Choice (MCQ)",
-    description: "4-option multiple choice with one correct answer",
+    label: "Trắc nghiệm (MCQ)",
+    description: "Trắc nghiệm 4 đáp án với một đáp án đúng",
   },
   SHORT_ANSWER: {
-    label: "Short Answer",
-    description: "Open-ended questions with a concise correct answer",
+    label: "Trả lời ngắn",
+    description: "Câu hỏi mở với đáp án đúng ngắn gọn",
   },
   CALCULATION: {
-    label: "Calculation",
-    description: "Math/physics problems with variable substitution",
+    label: "Tính toán",
+    description: "Bài toán toán/lý với biến thay thế",
   },
 };
 
@@ -68,7 +68,7 @@ function validatePlan(plan: GenerationPlan): string | null {
   const enabledTypes = (["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).filter(
     (t) => plan[t].enabled
   );
-  if (enabledTypes.length === 0) return "Enable at least one question type.";
+  if (enabledTypes.length === 0) return "Hãy bật ít nhất một dạng câu hỏi.";
   for (const t of enabledTypes) {
     const cfg = plan[t];
     const { easy, medium, hard } = cfg.distribution;
@@ -253,15 +253,15 @@ export function QBChatPanel({
 
   function buildSteps(totalBuckets: number) {
     const steps: GenerationStep[] = [
-      { id: "validate", label: "Validating configuration", status: "pending" },
+      { id: "validate", label: "Đang kiểm tra cấu hình", status: "pending" },
       ...Array.from({ length: totalBuckets }, (_, i) => ({
         id: `generate-${i}`,
         label: `Generating questions (${i + 1}/${totalBuckets})`,
         status: "pending" as const,
       })),
-      { id: "recheck", label: "AI quality review", status: "pending" },
-      { id: "save", label: "Saving to database", status: "pending" },
-      { id: "complete", label: "Complete", status: "pending" },
+      { id: "recheck", label: "AI đánh giá chất lượng", status: "pending" },
+      { id: "save", label: "Đang lưu vào cơ sở dữ liệu", status: "pending" },
+      { id: "complete", label: "Hoàn tất", status: "pending" },
     ];
     return steps;
   }
@@ -303,7 +303,7 @@ export function QBChatPanel({
 
       if (!saveRes.ok) {
         const err = await saveRes.json();
-        throw new Error(err.error || "Failed to save settings");
+        throw new Error(err.error || "Không thể lưu cài đặt");
       }
 
       updateStep("validate", "completed");
@@ -323,7 +323,7 @@ export function QBChatPanel({
       const genData = await genRes.json();
 
       if (!genRes.ok) {
-        throw new Error(genData.error || "Generation failed");
+        throw new Error(genData.error || "Tạo câu hỏi thất bại");
       }
 
       // Mark all generation steps as done (the backend handles them)
@@ -340,7 +340,7 @@ export function QBChatPanel({
       setPhase("completed");
       onQuestionsCreated?.();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "An error occurred";
+      const msg = err instanceof Error ? err.message : "Đã xảy ra lỗi";
       setError(msg);
       setPhase("error");
 
@@ -393,9 +393,9 @@ export function QBChatPanel({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b shrink-0">
         <div>
-          <h2 className="font-semibold text-lg">Question Generator</h2>
+          <h2 className="font-semibold text-lg">Trình tạo câu hỏi</h2>
           <p className="text-xs text-muted-foreground">
-            Configure per-type and per-difficulty settings
+            Cấu hình theo từng dạng câu hỏi và độ khó
           </p>
         </div>
         <Button variant="ghost" size="icon" onClick={handleClose}>
@@ -426,7 +426,7 @@ export function QBChatPanel({
           <div className="mx-4 mt-4 p-3 bg-muted rounded-lg space-y-2">
             <div className="flex items-center gap-2 mb-3">
               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-              <p className="text-sm font-medium">Generating...</p>
+              <p className="text-sm font-medium">Đang tạo...</p>
             </div>
             <div className="space-y-1.5">
               {generationSteps.map((step, idx) => (
@@ -477,7 +477,7 @@ export function QBChatPanel({
                 setSuccessMessage(null);
               }}
             >
-              Generate More
+              Tạo thêm
             </Button>
           </div>
         )}
@@ -487,7 +487,7 @@ export function QBChatPanel({
           <div className="p-4 space-y-4">
             {/* Summary */}
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Total questions:</span>
+              <span className="text-muted-foreground">Tổng số câu hỏi:</span>
               <span className="font-semibold">{totalCount}</span>
             </div>
 
@@ -514,7 +514,7 @@ export function QBChatPanel({
                           })
                         }
                       >
-                        {cfg.enabled ? "Enabled" : "Disabled"}
+                        {cfg.enabled ? "Đang bật" : "Đang tắt"}
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground">{meta.description}</p>
@@ -525,7 +525,7 @@ export function QBChatPanel({
                       {/* Total count */}
                       <div className="space-y-1">
                         <Label htmlFor={`${type}-count`} className="text-xs">
-                          Total Count
+                          Tổng số lượng
                         </Label>
                         <Input
                           id={`${type}-count`}
@@ -541,7 +541,7 @@ export function QBChatPanel({
 
                       {/* Difficulty distribution */}
                       <div className="space-y-1">
-                        <Label className="text-xs">Difficulty Distribution</Label>
+                        <Label className="text-xs">Phân bố độ khó</Label>
                         <div className="grid grid-cols-3 gap-2">
                           {DIFFICULTIES.map((diff) => (
                             <div key={diff} className="space-y-1">
@@ -600,11 +600,11 @@ export function QBChatPanel({
             {/* Custom instructions */}
             <div className="space-y-1">
               <Label htmlFor="custom-instructions" className="text-xs">
-                Custom Instructions (optional)
+                Hướng dẫn tùy chọn
               </Label>
               <Textarea
                 id="custom-instructions"
-                placeholder="e.g. Focus on Chapter 3, emphasize formulas..."
+                placeholder="ví dụ: Tập trung vào Chương 3, nhấn mạnh các công thức..."
                 rows={2}
                 value={customInstructions}
                 onChange={(e) => setCustomInstructions(e.target.value)}
@@ -623,10 +623,10 @@ export function QBChatPanel({
               {isSuggesting ? (
                 <>
                   <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full mr-2" />
-                  Suggesting...
+                  Đang gợi ý...
                 </>
               ) : (
-                "Suggest settings with AI"
+                "Gợi ý cài đặt bằng AI"
               )}
             </Button>
           </div>
@@ -641,7 +641,7 @@ export function QBChatPanel({
             onClick={handleGenerate}
             disabled={isLoading || totalCount === 0}
           >
-            {isLoading ? "Generating..." : `Generate ${totalCount} Question${totalCount !== 1 ? "s" : ""}`}
+            {isLoading ? "Đang tạo..." : `Tạo ${totalCount} câu hỏi`}
           </Button>
         </div>
       )}

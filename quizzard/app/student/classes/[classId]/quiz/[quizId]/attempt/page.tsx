@@ -106,7 +106,7 @@ export default function QuizAttemptPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to load attempt");
+        throw new Error(data.error || "Không thể tải lượt làm bài");
       }
 
       setAttempt(data.data);
@@ -121,8 +121,8 @@ export default function QuizAttemptPage({
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load attempt",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tải lượt làm bài",
         variant: "destructive",
       });
     } finally {
@@ -170,12 +170,12 @@ export default function QuizAttemptPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to submit quiz");
+        throw new Error(data.error || "Không thể nộp bài kiểm tra");
       }
 
       toast({
-        title: isAutoSubmit ? "Time's up!" : "Quiz submitted",
-        description: `Your score: ${Math.round(data.data.score)}%`,
+        title: isAutoSubmit ? "Hết thời gian!" : "Đã nộp bài kiểm tra",
+        description: `Điểm của bạn: ${Math.round(data.data.score)}%`,
       });
 
       router.push(
@@ -183,8 +183,8 @@ export default function QuizAttemptPage({
       );
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit quiz",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể nộp bài kiểm tra",
         variant: "destructive",
       });
       setIsSubmitting(false);
@@ -235,12 +235,12 @@ export default function QuizAttemptPage({
       <div className="p-6">
         <Card className="max-w-md mx-auto">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <h3 className="text-lg font-semibold mb-2">Quiz not found</h3>
+            <h3 className="text-lg font-semibold mb-2">Không tìm thấy bài kiểm tra</h3>
             <p className="text-muted-foreground mb-4">
-              This quiz attempt could not be loaded
+              Không thể tải lượt làm bài này
             </p>
             <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
-              Back to Class
+              Quay lại lớp
             </Button>
           </CardContent>
         </Card>
@@ -263,7 +263,7 @@ export default function QuizAttemptPage({
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-muted-foreground">
-              {answeredCount} / {questions.length} answered
+              {answeredCount} / {questions.length} đã trả lời
             </span>
             {timeLeft !== null && (
               <div
@@ -292,13 +292,13 @@ export default function QuizAttemptPage({
             <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
               <div className="space-y-2">
                 <span className="text-sm text-muted-foreground">
-                  Question {currentQuestion + 1} of {questions.length}
+                  Câu {currentQuestion + 1} / {questions.length}
                 </span>
                 {getQuestionBadge(currentQ.type)}
               </div>
               {answers[currentQ.questionBankItemId] && (
                 <Badge variant="default" className="bg-green-600">
-                  Answered
+                  Đã trả lời
                 </Badge>
               )}
             </CardHeader>
@@ -342,7 +342,7 @@ export default function QuizAttemptPage({
                 <div className="space-y-2">
                   <input
                     type="text"
-                    placeholder="Type your answer..."
+                    placeholder="Nhập câu trả lời của bạn..."
                     value={answers[currentQ.questionBankItemId]?.text || ""}
                     onChange={(e) =>
                       handleAnswerChange(currentQ.questionBankItemId, {
@@ -358,12 +358,12 @@ export default function QuizAttemptPage({
               {currentQ.type === "CALCULATION" && (
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Enter your calculated answer:
+                    Nhập kết quả tính toán của bạn:
                   </p>
                   <input
                     type="number"
                     step="any"
-                    placeholder="Enter numeric answer..."
+                    placeholder="Nhập đáp án số..."
                     value={answers[currentQ.questionBankItemId]?.value || ""}
                     onChange={(e) =>
                       handleAnswerChange(currentQ.questionBankItemId, {
@@ -400,7 +400,7 @@ export default function QuizAttemptPage({
             >
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            Previous
+            Trước
           </Button>
 
           <div className="flex gap-1">
@@ -425,7 +425,7 @@ export default function QuizAttemptPage({
             <Button
               onClick={() => setCurrentQuestion((prev) => prev + 1)}
             >
-              Next
+              Tiếp theo
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -446,7 +446,7 @@ export default function QuizAttemptPage({
               onClick={() => handleSubmit(false)}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Submitting..." : "Submit Quiz"}
+              {isSubmitting ? "Đang nộp..." : "Nộp bài"}
             </Button>
           )}
         </div>
@@ -456,8 +456,8 @@ export default function QuizAttemptPage({
           <div className="mt-6 p-4 bg-muted/50 rounded-lg">
             <p className="text-center text-sm text-muted-foreground mb-4">
               {answeredCount === questions.length
-                ? "All questions answered. Ready to submit!"
-                : `You have ${questions.length - answeredCount} unanswered question(s).`}
+                ? "Đã trả lời tất cả câu hỏi. Sẵn sàng nộp bài!"
+                : `Bạn còn ${questions.length - answeredCount} câu hỏi chưa trả lời.`}
             </p>
             <div className="flex justify-center gap-4">
               <Button
@@ -465,13 +465,13 @@ export default function QuizAttemptPage({
                 onClick={saveAnswers}
                 disabled={!hasUnsavedChanges}
               >
-                {hasUnsavedChanges ? "Save Progress" : "Progress Saved"}
+                {hasUnsavedChanges ? "Lưu tiến độ" : "Đã lưu tiến độ"}
               </Button>
               <Button
                 onClick={() => handleSubmit(false)}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Submitting..." : "Submit Quiz"}
+                {isSubmitting ? "Đang nộp..." : "Nộp bài"}
               </Button>
             </div>
           </div>

@@ -14,7 +14,7 @@ export async function DELETE(
 
     const lecture = await getLectureById(lectureId);
     if (!lecture) {
-      return Response.json({ error: "Lecture not found" }, { status: 404 });
+      return Response.json({ error: "Không tìm thấy buổi giảng" }, { status: 404 });
     }
 
     await deleteLecture(lectureId, session.userId);

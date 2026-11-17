@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error("Không tìm thấy người dùng");
     }
 
     return Response.json({

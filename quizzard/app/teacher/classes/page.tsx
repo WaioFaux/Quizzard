@@ -57,8 +57,8 @@ export default function TeacherClassesPage() {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load classes",
+        title: "Lỗi",
+        description: "Không thể tải danh sách lớp",
         variant: "destructive",
       });
     } finally {
@@ -80,12 +80,12 @@ export default function TeacherClassesPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to create class");
+        throw new Error(data.error || "Không thể tạo lớp");
       }
 
       toast({
-        title: "Success",
-        description: "Class created successfully",
+        title: "Thành công",
+        description: "Tạo lớp thành công",
       });
 
       setIsDialogOpen(false);
@@ -93,8 +93,8 @@ export default function TeacherClassesPage() {
       fetchClasses();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create class",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tạo lớp",
         variant: "destructive",
       });
     } finally {
@@ -107,8 +107,8 @@ export default function TeacherClassesPage() {
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">My Classes</h1>
-            <p className="text-muted-foreground">Manage your classes and quizzes</p>
+            <h1 className="text-2xl font-bold">Lớp của tôi</h1>
+            <p className="text-muted-foreground">Quản lý các lớp và bài kiểm tra của bạn</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -132,8 +132,8 @@ export default function TeacherClassesPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">My Classes</h1>
-          <p className="text-muted-foreground">Manage your classes and quizzes</p>
+          <h1 className="text-2xl font-bold">Lớp của tôi</h1>
+          <p className="text-muted-foreground">Quản lý các lớp và bài kiểm tra của bạn</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

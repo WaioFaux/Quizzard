@@ -3,6 +3,7 @@
  * Phase 1: Analyze document and propose lecture structure
  * Phase 2: Generate valid lecture format when user confirms
  */
+import { VIETNAMESE_OUTPUT_RULE } from "./language";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -53,17 +54,19 @@ I will provide you with extracted text from an educational document. Your task i
 ${materialText.slice(0, 15000)}${materialText.length > 15000 ? "\n\n[... content truncated ...]" : ""}
 \`\`\`
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Please analyze this document and propose a lecture structure. Return your response as a JSON array with the following format:
 
 \`\`\`json
 {
-  "message": "Your analysis and greeting to the user",
+  "message": "Phân tích và lời chào của bạn dành cho người dùng",
   "proposals": [
     {
-      "title": "Lecture Title",
+      "title": "Tiêu đề buổi giảng",
       "startPage": 1,
       "endPage": 10,
-      "description": "Brief description of topics covered"
+      "description": "Mô tả ngắn gọn các chủ đề được đề cập"
     }
   ],
   "readyToConfirm": true
@@ -89,15 +92,17 @@ Current lecture proposals:
 ${proposalsJson}
 \`\`\`
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Please respond to the user's message while considering the current proposals. 
 If they're asking to modify proposals, update them accordingly.
 If they're asking questions, answer helpfully.
-If they want to confirm, tell them to use the "Confirm Plan" button.
+If they want to confirm, tell them to use the "Xác nhận kế hoạch" button.
 
 Return your response as:
 \`\`\`json
 {
-  "message": "Your response to the user",
+  "message": "Câu trả lời của bạn cho người dùng",
   "proposals": [updated proposals if changed, otherwise keep as is],
   "readyToConfirm": true/false
 }
@@ -115,20 +120,22 @@ export function getConfirmPrompt(confirmedProposals: LectureProposal[]): string 
 ${proposalsJson}
 \`\`\`
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Now generate the final lecture data in the exact format needed for database insertion:
 
 \`\`\`json
 {
-  "message": "Confirmation message to display to user",
+  "message": "Thông báo xác nhận hiển thị cho người dùng",
   "lectures": [
     {
-      "title": "Lecture Title",
+      "title": "Tiêu đề buổi giảng",
       "sourceRef": {
         "startPage": 1,
         "endPage": 10
       },
       "quiz": {
-        "instructions": "Generate questions covering: [brief topic summary]",
+        "instructions": "Tạo câu hỏi bao gồm: [tóm tắt chủ đề ngắn gọn]",
         "questionCount": 5
       }
     }
@@ -149,11 +156,13 @@ Requirements:
  */
 export const CHAT_SYSTEM_PROMPT = `You are a helpful AI teaching assistant for organizing educational content.
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Guidelines:
 - Be friendly and professional
 - Help users understand their document structure
 - Suggest improvements to lecture plans when appropriate
-- When proposals are ready, inform the user they can click "Confirm Plan"
+- When proposals are ready, inform the user they can click "Xác nhận kế hoạch"
 - Do not make up information not present in the document
 - If the document is unclear, ask clarifying questions
 - Keep responses concise but informative

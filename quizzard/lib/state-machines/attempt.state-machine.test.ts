@@ -13,16 +13,16 @@ describe("Attempt State Machine", () => {
 
   it("should throw on SUBMITTED to any status", () => {
     expect(() => transitionAttempt(AttemptStatus.SUBMITTED, AttemptStatus.IN_PROGRESS as never))
-      .toThrow("Illegal Attempt transition from SUBMITTED to IN_PROGRESS");
+      .toThrow("Chuyển trạng thái Attempt không hợp lệ từ SUBMITTED sang IN_PROGRESS");
   });
 
   it("should throw on AUTO_SUBMITTED to any status", () => {
     expect(() => transitionAttempt(AttemptStatus.AUTO_SUBMITTED, AttemptStatus.IN_PROGRESS as never))
-      .toThrow("Illegal Attempt transition from AUTO_SUBMITTED to IN_PROGRESS");
+      .toThrow("Chuyển trạng thái Attempt không hợp lệ từ AUTO_SUBMITTED sang IN_PROGRESS");
   });
 
   it("should throw on IN_PROGRESS to IN_PROGRESS", () => {
     expect(() => transitionAttempt(AttemptStatus.IN_PROGRESS, AttemptStatus.IN_PROGRESS as never))
-      .toThrow("Illegal Attempt transition");
+      .toThrow("Chuyển trạng thái Attempt không hợp lệ");
   });
 });

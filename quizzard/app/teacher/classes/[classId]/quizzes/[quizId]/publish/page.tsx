@@ -74,8 +74,8 @@ export default function PublishQuizPage({
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load quiz",
+        title: "Lỗi",
+        description: "Không thể tải bài kiểm tra",
         variant: "destructive",
       });
     } finally {
@@ -98,19 +98,19 @@ export default function PublishQuizPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to publish quiz");
+        throw new Error(data.error || "Không thể xuất bản bài kiểm tra");
       }
 
       toast({
-        title: "Success",
-        description: "Quiz published successfully",
+        title: "Thành công",
+        description: "Đã xuất bản bài kiểm tra thành công",
       });
 
       router.push(`/teacher/classes/${classId}/quizzes/${quizId}`);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to publish quiz",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xuất bản bài kiểm tra",
         variant: "destructive",
       });
     } finally {
@@ -139,9 +139,9 @@ export default function PublishQuizPage({
     return (
       <div className="p-6">
         <Card className="flex flex-col items-center justify-center py-12">
-          <h3 className="text-lg font-semibold mb-2">Quiz not found</h3>
+          <h3 className="text-lg font-semibold mb-2">Không tìm thấy bài kiểm tra</h3>
           <Button variant="outline" onClick={() => router.push(`/teacher/classes/${classId}`)}>
-            Back to Class
+            Quay lại lớp
           </Button>
         </Card>
       </div>
@@ -173,42 +173,42 @@ export default function PublishQuizPage({
           {quiz.lecture.title}
         </Button>
       </div>
-      <h1 className="text-2xl font-bold mb-1">Publish Quiz</h1>
+      <h1 className="text-2xl font-bold mb-1">Xuất bản bài kiểm tra</h1>
       <p className="text-muted-foreground mb-6">
-        Review and publish your quiz for students
+        Xem xét và xuất bản bài kiểm tra cho học sinh
       </p>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Quiz Summary</CardTitle>
+            <CardTitle>Tóm tắt bài kiểm tra</CardTitle>
             <CardDescription>
-              Review quiz details before publishing
+              Xem lại chi tiết bài kiểm tra trước khi xuất bản
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Status</span>
+              <span className="text-muted-foreground">Trạng thái</span>
               <Badge variant={quiz.status === "PUBLISHED" ? "default" : "secondary"}>
-                {quiz.status === "PUBLISHED" ? "Published" : "Draft"}
+                {quiz.status === "PUBLISHED" ? "Đã xuất bản" : "Nháp"}
               </Badge>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Lecture</span>
+              <span className="text-muted-foreground">Buổi giảng</span>
               <span className="font-medium">{quiz.lecture.title}</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Total Questions</span>
+              <span className="text-muted-foreground">Tổng số câu hỏi</span>
               <span className="font-medium">{totalCount}</span>
             </div>
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-muted-foreground">Approved Questions</span>
+              <span className="text-muted-foreground">Câu hỏi đã duyệt</span>
               <span className="font-medium">
                 {approvedCount} / {totalCount}
               </span>
             </div>
             <div className="flex items-center justify-between py-2">
-              <span className="text-muted-foreground">Student Attempts</span>
+              <span className="text-muted-foreground">Lượt làm bài của học sinh</span>
               <span className="font-medium">{quiz._count.attempts}</span>
             </div>
           </CardContent>
@@ -216,9 +216,9 @@ export default function PublishQuizPage({
 
         <Card>
           <CardHeader>
-            <CardTitle>Publishing Checklist</CardTitle>
+            <CardTitle>Danh sách kiểm tra trước khi xuất bản</CardTitle>
             <CardDescription>
-              Complete all items before publishing
+              Hoàn tất tất cả các mục trước khi xuất bản
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -258,10 +258,10 @@ export default function PublishQuizPage({
                 </svg>
               )}
               <div>
-                <p className="font-medium">All questions approved</p>
+                <p className="font-medium">Đã duyệt tất cả câu hỏi</p>
                 <p className="text-sm text-muted-foreground">
                   {allApproved
-                    ? "All questions have been reviewed and approved"
+                    ? "Tất cả câu hỏi đã được xem xét và phê duyệt"
                     : `${approvedCount} of ${totalCount} questions approved`}
                 </p>
               </div>
@@ -284,9 +284,9 @@ export default function PublishQuizPage({
                 <polyline points="22 4 12 14.01 9 11.01" />
               </svg>
               <div>
-                <p className="font-medium">Review instructions</p>
+                <p className="font-medium">Xem lại hướng dẫn</p>
                 <p className="text-sm text-muted-foreground">
-                  Quiz settings are configured
+                  Cài đặt bài kiểm tra đã được thiết lập
                 </p>
               </div>
             </div>
@@ -309,9 +309,9 @@ export default function PublishQuizPage({
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
                 <div>
-                  <p className="font-medium">Quiz already published</p>
+                  <p className="font-medium">Bài kiểm tra đã được xuất bản</p>
                   <p className="text-sm text-muted-foreground">
-                    Students can take this quiz
+                    Học sinh có thể làm bài kiểm tra này
                   </p>
                 </div>
               </div>
@@ -333,9 +333,9 @@ export default function PublishQuizPage({
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
                 <div>
-                  <p className="font-medium">Set deadline (optional)</p>
+                  <p className="font-medium">Đặt hạn chót (không bắt buộc)</p>
                   <p className="text-sm text-muted-foreground">
-                    Students must start before this date
+                    Học sinh phải bắt đầu trước ngày này
                   </p>
                 </div>
               </div>
@@ -346,15 +346,15 @@ export default function PublishQuizPage({
         {quiz.status !== "PUBLISHED" && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Set Deadline</CardTitle>
+              <CardTitle>Đặt hạn chót</CardTitle>
               <CardDescription>
-                Optionally set a deadline for students to start the quiz
+                Tùy chọn đặt hạn chót để học sinh bắt đầu bài kiểm tra
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-end gap-4">
                 <div className="space-y-2 flex-1">
-                  <Label htmlFor="deadline">Deadline</Label>
+                  <Label htmlFor="deadline">Hạn chót</Label>
                   <Input
                     id="deadline"
                     type="datetime-local"
@@ -368,12 +368,12 @@ export default function PublishQuizPage({
                     variant="outline"
                     onClick={() => setDeadline("")}
                   >
-                    Clear
+                    Xóa
                   </Button>
                 )}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                If no deadline is set, students can take the quiz at any time. You can always extend the deadline later.
+                Nếu không đặt hạn chót, học sinh có thể làm bài bất cứ lúc nào. Bạn luôn có thể gia hạn sau.
               </p>
             </CardContent>
           </Card>
@@ -381,22 +381,22 @@ export default function PublishQuizPage({
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Ready to Publish?</CardTitle>
+            <CardTitle>Sẵn sàng xuất bản?</CardTitle>
             <CardDescription>
               {quiz.status === "PUBLISHED"
-                ? "This quiz is live. You can still extend the deadline."
-                : "Once published, students will be able to see and take this quiz."}
+                ? "Bài kiểm tra đang hoạt động. Bạn vẫn có thể gia hạn."
+                : "Sau khi xuất bản, học sinh sẽ có thể xem và làm bài kiểm tra này."}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {quiz.status !== "PUBLISHED" && (
               <div className="bg-muted/50 rounded-lg p-4 text-sm">
-                <p className="font-medium mb-2">After publishing:</p>
+                <p className="font-medium mb-2">Sau khi xuất bản:</p>
                 <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                  <li>Question content becomes immutable</li>
-                  <li>Students can see and start the quiz</li>
-                  <li>You can only extend (not shorten) the deadline</li>
-                  <li>Question reports from students will appear in Reports</li>
+                  <li>Nội dung câu hỏi sẽ được cố định</li>
+                  <li>Học sinh có thể nhìn thấy và bắt đầu bài kiểm tra</li>
+                  <li>Bạn chỉ có thể kéo dài (không rút ngắn) hạn chót</li>
+                  <li>Các báo cáo từ học sinh sẽ xuất hiện trong mục Báo cáo</li>
                 </ul>
               </div>
             )}
@@ -406,33 +406,33 @@ export default function PublishQuizPage({
                 variant="outline"
                 onClick={() => router.push(`/teacher/classes/${classId}/quizzes/${quizId}`)}
               >
-                Back to Quiz
+                Quay lại bài kiểm tra
               </Button>
               {quiz.status !== "PUBLISHED" ? (
                 <Button
                   onClick={handlePublish}
                   disabled={!canPublish || isPublishing}
                 >
-                  {isPublishing ? "Publishing..." : "Publish Quiz"}
+                  {isPublishing ? "Đang xuất bản..." : "Xuất bản bài kiểm tra"}
                 </Button>
               ) : (
                 <Button
                   variant="outline"
                   onClick={() => router.push(`/teacher/classes/${classId}`)}
                 >
-                  Done
+                  Xong
                 </Button>
               )}
             </div>
 
             {!allApproved && (
               <p className="text-sm text-amber-600">
-                All questions must be approved before publishing.{" "}
+                Tất cả câu hỏi phải được duyệt trước khi xuất bản.{" "}
                 <a
                   href={`/teacher/classes/${classId}/quizzes/${quizId}/question-bank`}
                   className="underline"
                 >
-                  Review questions
+                  Xem lại câu hỏi
                 </a>
               </p>
             )}

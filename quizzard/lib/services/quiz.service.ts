@@ -23,15 +23,15 @@ export async function createQuiz(
   });
 
   if (!lecture) {
-    throw new NotFoundError("Lecture");
+    throw new NotFoundError("Buổi giảng");
   }
 
   if (lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this lecture");
+    throw new AuthorizationError("Bạn không sở hữu buổi giảng này");
   }
 
   if (lecture.quiz) {
-    throw new AuthorizationError("This lecture already has a quiz");
+    throw new AuthorizationError("Buổi giảng này đã có bài kiểm tra");
   }
 
   const quiz = await prisma.quiz.create({
@@ -85,11 +85,11 @@ export async function getQuiz(quizId: string, teacherId: string) {
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   return quiz;
@@ -114,16 +114,16 @@ export async function updateQuiz(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {
     throw new AuthorizationError(
-      "Cannot update a published quiz. Only deadline extension is allowed."
+      "Không thể cập nhật bài kiểm tra đã xuất bản. Chỉ được phép gia hạn thời hạn."
     );
   }
 
@@ -159,11 +159,11 @@ export async function publishQuiz(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   transitionQuiz(quiz.status, QuizStatus.PUBLISHED);
@@ -175,7 +175,7 @@ export async function publishQuiz(
 
   if (allQuestions > 0 && quiz._count.questionBank < allQuestions) {
     throw new AuthorizationError(
-      "All questions must be approved before publishing the quiz"
+      "Tất cả câu hỏi phải được duyệt trước khi xuất bản bài kiểm tra"
     );
   }
 
@@ -206,15 +206,15 @@ export async function extendDeadline(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   if (quiz.status !== QuizStatus.PUBLISHED) {
-    throw new AuthorizationError("Only published quizzes have deadlines");
+    throw new AuthorizationError("Chỉ bài kiểm tra đã xuất bản mới có hạn chót");
   }
 
   const currentDeadline = quiz.deadline ? new Date(quiz.deadline) : null;
@@ -222,7 +222,7 @@ export async function extendDeadline(
 
   // Can only extend, not shorten (unless no deadline set)
   if (currentDeadline && proposedDeadline < currentDeadline) {
-    throw new AuthorizationError("Cannot shorten existing deadline");
+    throw new AuthorizationError("Không thể rút ngắn hạn chót hiện tại");
   }
 
   return prisma.quiz.update({
@@ -255,13 +255,13 @@ export async function getQuizForStudent(quizId: string, studentId: string) {
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   // Check if student is enrolled in the class
   const isEnrolled = quiz.lecture.class.enrollments.length > 0;
   if (!isEnrolled) {
-    throw new AuthorizationError("You are not enrolled in this class");
+    throw new AuthorizationError("Bạn chưa tham gia lớp này");
   }
 
   return quiz;
@@ -293,18 +293,18 @@ export async function getLeaderboard(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   // Authorization
   if (userRole === "TEACHER" && quiz.lecture.class.teacherId !== userId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
   if (
     userRole === "STUDENT" &&
     !quiz.lecture.class.enrollments.some((e) => e.studentId === userId)
   ) {
-    throw new AuthorizationError("You are not enrolled in this class");
+    throw new AuthorizationError("Bạn chưa tham gia lớp này");
   }
 
   // Get all attempts for this quiz

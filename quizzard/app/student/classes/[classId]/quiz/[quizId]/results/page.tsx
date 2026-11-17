@@ -89,14 +89,14 @@ export default function QuizResultsPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to load results");
+        throw new Error(data.error || "Không thể tải kết quả");
       }
 
       setAttempt(data.data);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to load results",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tải kết quả",
         variant: "destructive",
       });
     } finally {
@@ -122,12 +122,12 @@ export default function QuizResultsPage({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to submit report");
+        throw new Error(data.error || "Không thể gửi báo cáo");
       }
 
       toast({
-        title: "Success",
-        description: "Report submitted. The teacher will review it.",
+        title: "Thành công",
+        description: "Đã gửi báo cáo. Giáo viên sẽ xem xét.",
       });
 
       setShowReportDialog(false);
@@ -135,8 +135,8 @@ export default function QuizResultsPage({
       setReportDescription("");
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit report",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể gửi báo cáo",
         variant: "destructive",
       });
     } finally {
@@ -151,11 +151,11 @@ export default function QuizResultsPage({
   }
 
   function getScoreLabel(score: number) {
-    if (score >= 90) return "Excellent!";
-    if (score >= 80) return "Great job!";
-    if (score >= 70) return "Good work!";
-    if (score >= 60) return "Keep practicing!";
-    return "Need improvement";
+    if (score >= 90) return "Xuất sắc!";
+    if (score >= 80) return "Làm tốt lắm!";
+    if (score >= 70) return "Tốt lắm!";
+    if (score >= 60) return "Tiếp tục luyện tập!";
+    return "Cần cải thiện thêm";
   }
 
   if (isLoading) {
@@ -175,12 +175,12 @@ export default function QuizResultsPage({
       <div className="p-6">
         <Card className="max-w-md mx-auto">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <h3 className="text-lg font-semibold mb-2">Results not found</h3>
+            <h3 className="text-lg font-semibold mb-2">Không tìm thấy kết quả</h3>
             <p className="text-muted-foreground mb-4">
-              This quiz result could not be loaded
+              Không thể tải kết quả bài kiểm tra này
             </p>
             <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
-              Back to Class
+              Quay lại lớp
             </Button>
           </CardContent>
         </Card>
@@ -222,7 +222,7 @@ export default function QuizResultsPage({
       <Card className="mb-6">
         <CardHeader className="text-center pb-2">
           <CardDescription>{attempt.quiz.lecture.title}</CardDescription>
-          <CardTitle className="text-2xl">Quiz Results</CardTitle>
+          <CardTitle className="text-2xl">Kết quả bài kiểm tra</CardTitle>
         </CardHeader>
         <CardContent className="text-center">
           <div className="flex items-center justify-center gap-12 py-6">
@@ -230,14 +230,14 @@ export default function QuizResultsPage({
               <p className={`text-5xl font-bold ${getScoreColor(attempt.score)}`}>
                 {Math.round(attempt.score)}%
               </p>
-              <p className="text-sm text-muted-foreground mt-1">Score</p>
+              <p className="text-sm text-muted-foreground mt-1">Điểm</p>
             </div>
             <div className="h-16 w-px bg-border"></div>
             <div>
               <p className="text-5xl font-bold">
                 {correctCount}<span className="text-2xl text-muted-foreground">/{totalCount}</span>
               </p>
-              <p className="text-sm text-muted-foreground mt-1">Correct</p>
+              <p className="text-sm text-muted-foreground mt-1">Đúng</p>
             </div>
           </div>
           <p className={`text-lg font-medium ${getScoreColor(attempt.score)}`}>
@@ -245,7 +245,7 @@ export default function QuizResultsPage({
           </p>
           {attempt.submittedAt && (
             <p className="text-sm text-muted-foreground mt-2">
-              Submitted {new Date(attempt.submittedAt).toLocaleString()}
+              Nộp lúc {new Date(attempt.submittedAt).toLocaleString("vi-VN")}
             </p>
           )}
         </CardContent>
@@ -253,7 +253,7 @@ export default function QuizResultsPage({
 
       {/* Question Breakdown */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Question Breakdown</h2>
+        <h2 className="text-lg font-semibold">Chi tiết từng câu hỏi</h2>
         {questions.map((question, idx) => {
           const answer = attempt.answers.find(
             (a) => a.questionBankItemId === question.questionBankItemId
@@ -305,7 +305,7 @@ export default function QuizResultsPage({
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-sm text-muted-foreground">
-                        Question {idx + 1}
+                        Câu {idx + 1}
                       </span>
                       <Badge
                         variant="secondary"
@@ -326,23 +326,23 @@ export default function QuizResultsPage({
 
                     <div className="space-y-2 text-sm">
                       <div className="flex items-start gap-2">
-                        <span className="text-muted-foreground w-20">Your answer:</span>
+                        <span className="text-muted-foreground w-20">Câu trả lời của bạn:</span>
                         <span className={isCorrect ? "text-green-600" : "text-red-600"}>
                           {answer?.answer?.selectedOptionIndex !== undefined
                             ? String(
                                 (question.content.options as string[])?.[answer.answer.selectedOptionIndex as number] ||
-                                  "Not answered"
+                                  "Chưa trả lời"
                               )
                             : answer?.answer?.text ||
                               (answer?.answer?.value !== undefined
                                 ? String(answer.answer.value)
-                                : "Not answered")}
+                                : "Chưa trả lời")}
                         </span>
                       </div>
                       {!isCorrect && answer?.correctAnswerSnapshot && (
                         <div className="flex items-start gap-2">
                           <span className="text-muted-foreground w-20">
-                            Correct answer:
+                            Đáp án đúng:
                           </span>
                           <span className="text-green-600 font-medium">
                             {answer.correctAnswerSnapshot.correctIndex !== undefined
@@ -361,7 +361,7 @@ export default function QuizResultsPage({
                       {question.content.explanation && (
                         <div className="flex items-start gap-2 bg-muted/50 p-2 rounded">
                           <span className="text-muted-foreground w-20">
-                            Explanation:
+                            Giải thích:
                           </span>
                           <span className="text-muted-foreground">
                             {String(question.content.explanation)}
@@ -394,7 +394,7 @@ export default function QuizResultsPage({
                       <line x1="12" y1="18" x2="12" y2="12" />
                       <line x1="12" y1="9" x2="12.01" y2="9" />
                     </svg>
-                    Report
+                    Báo cáo
                   </Button>
                 </div>
               </CardContent>
@@ -406,7 +406,7 @@ export default function QuizResultsPage({
       {/* Actions */}
       <div className="flex justify-center gap-4 mt-8">
         <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}`)}>
-          Back to Class
+          Quay lại lớp
         </Button>
         <Button
           variant="outline"
@@ -414,7 +414,7 @@ export default function QuizResultsPage({
             router.push(`/student/leaderboard?quizId=${quizId}&classId=${classId}`)
           }
         >
-          View Leaderboard
+          Xem bảng xếp hạng
         </Button>
       </div>
 
@@ -422,14 +422,14 @@ export default function QuizResultsPage({
       <Dialog open={showReportDialog} onOpenChange={setShowReportDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Report a Problem</DialogTitle>
+            <DialogTitle>Báo cáo vấn đề</DialogTitle>
             <DialogDescription>
-              Report an issue with this question to your teacher
+              Báo cáo vấn đề với câu hỏi này cho giáo viên của bạn
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <p className="text-sm font-medium mb-1">Question:</p>
+              <p className="text-sm font-medium mb-1">Câu hỏi:</p>
               <p className="text-sm bg-muted p-3 rounded">
                 {selectedAnswer &&
                   String(
@@ -445,15 +445,15 @@ export default function QuizResultsPage({
               </p>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">What's wrong?</label>
+              <label className="text-sm font-medium">Vấn đề là gì?</label>
               <Textarea
-                placeholder="Describe the issue with this question (minimum 10 characters)..."
+                placeholder="Mô tả vấn đề với câu hỏi này (tối thiểu 10 ký tự)..."
                 rows={4}
                 value={reportDescription}
                 onChange={(e) => setReportDescription(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                {reportDescription.length}/10 characters minimum
+                {reportDescription.length}/10 ký tự tối thiểu
               </p>
             </div>
           </div>
@@ -465,13 +465,13 @@ export default function QuizResultsPage({
                 setReportDescription("");
               }}
             >
-              Cancel
+              Hủy
             </Button>
             <Button
               onClick={handleReport}
               disabled={reportDescription.length < 10 || isReporting}
             >
-              {isReporting ? "Submitting..." : "Submit Report"}
+              {isReporting ? "Đang gửi..." : "Gửi báo cáo"}
             </Button>
           </DialogFooter>
         </DialogContent>

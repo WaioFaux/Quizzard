@@ -45,12 +45,12 @@ export async function POST(request: Request) {
           !pathname.startsWith("materials/") ||
           !pathname.toLowerCase().endsWith(".pdf")
         ) {
-          throw new ValidationError("Invalid upload path");
+          throw new ValidationError("Đường dẫn tải lên không hợp lệ");
         }
 
         const classId = safeParseClassId(clientPayload);
         if (!classId) {
-          throw new ValidationError("classId is required");
+          throw new ValidationError("Cần có classId");
         }
 
         const cls = await prisma.class.findUnique({
@@ -59,10 +59,10 @@ export async function POST(request: Request) {
         });
 
         if (!cls) {
-          throw new NotFoundError("Class");
+          throw new NotFoundError("Lớp");
         }
         if (cls.teacherId !== session.userId) {
-          throw new AuthorizationError("You do not own this class");
+          throw new AuthorizationError("Bạn không sở hữu lớp này");
         }
 
         return {

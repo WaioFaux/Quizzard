@@ -10,43 +10,43 @@ export interface SourceRef {
 }
 
 export const SourceRefSchema: z.ZodType<SourceRef> = z.object({
-  materialId: z.string().cuid("Invalid material ID"),
-  startPage: z.number().int().min(1, "Start page must be at least 1"),
-  endPage: z.number().int().min(1, "End page must be at least 1"),
+  materialId: z.string().cuid("ID tài liệu không hợp lệ"),
+  startPage: z.number().int().min(1, "Trang đầu phải bắt đầu từ 1"),
+  endPage: z.number().int().min(1, "Trang cuối phải bắt đầu từ 1"),
 }).refine((data) => data.endPage >= data.startPage, {
-  message: "End page must be greater than or equal to start page",
+  message: "Trang cuối phải lớn hơn hoặc bằng trang đầu",
 });
 
 // ---------- Auth ----------
 
 export const SignupSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters").max(100),
+  name: z.string().min(1, "Cần có tên").max(100),
+  email: z.string().email("Địa chỉ email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự").max(100),
   role: z.nativeEnum(Role),
 });
 
 export const LoginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Địa chỉ email không hợp lệ"),
+  password: z.string().min(1, "Cần có mật khẩu"),
 });
 
 export const UpdateProfileSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100),
-  email: z.string().email("Invalid email address"),
+  name: z.string().min(1, "Cần có tên").max(100),
+  email: z.string().email("Địa chỉ email không hợp lệ"),
 });
 
 export const ChangePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required"),
-  newPassword: z.string().min(6, "Password must be at least 6 characters").max(100),
+  currentPassword: z.string().min(1, "Cần có mật khẩu hiện tại"),
+  newPassword: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự").max(100),
 });
 
 // ---------- Classes ----------
 
 export const CreateClassSchema = z.object({
-  name: z.string().min(1, "Class name is required").max(100),
+  name: z.string().min(1, "Cần có tên lớp").max(100),
   description: z.string().max(500).optional(),
-  classPassword: z.string().min(4, "Password must be at least 4 characters").max(50),
+  classPassword: z.string().min(4, "Mật khẩu phải có ít nhất 4 ký tự").max(50),
 });
 
 export const UpdateClassSchema = z.object({
@@ -54,23 +54,23 @@ export const UpdateClassSchema = z.object({
   description: z.string().max(500).optional().nullable(),
   classPassword: z
     .string()
-    .min(4, "Password must be at least 4 characters")
+    .min(4, "Mật khẩu phải có ít nhất 4 ký tự")
     .max(50)
     .optional(),
 });
 
 export const JoinClassSchema = z.object({
-  classCode: z.string().min(1, "Class code is required"),
-  classPassword: z.string().min(1, "Class password is required"),
+  classCode: z.string().min(1, "Cần có mã lớp"),
+  classPassword: z.string().min(1, "Cần có mật khẩu lớp"),
 });
 
 // ---------- Lectures ----------
 
 export const CreateLectureSchema = z.object({
-  classId: z.string().cuid("Invalid class ID"),
-  title: z.string().min(1, "Title is required").max(200),
+  classId: z.string().cuid("ID lớp không hợp lệ"),
+  title: z.string().min(1, "Cần có tiêu đề").max(200),
   sourceRef: SourceRefSchema.optional().nullable(),
-  materialId: z.string().cuid("Invalid material ID").optional().nullable(),
+  materialId: z.string().cuid("ID tài liệu không hợp lệ").optional().nullable(),
   order: z.number().int().positive().optional(),
 });
 
@@ -78,23 +78,23 @@ export const UpdateLectureSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   sourceRef: SourceRefSchema.optional().nullable(),
   order: z.number().int().positive().optional(),
-  materialId: z.string().cuid("Invalid material ID").optional().nullable(),
+  materialId: z.string().cuid("ID tài liệu không hợp lệ").optional().nullable(),
 });
 
 // ---------- Quizzes ----------
 
 export const CreateQuizSchema = z.object({
-  lectureId: z.string().cuid("Invalid lecture ID"),
-  instructions: z.string().min(1, "Instructions are required").max(5000),
+  lectureId: z.string().cuid("ID buổi giảng không hợp lệ"),
+  instructions: z.string().min(1, "Cần có hướng dẫn").max(5000),
   questionsPerAttempt: z
     .number()
     .int()
-    .min(1, "At least 1 question per attempt")
+    .min(1, "Cần ít nhất 1 câu hỏi mỗi lượt làm bài")
     .max(100),
   timeLimitMinutes: z
     .number()
     .int()
-    .min(1, "Time limit must be at least 1 minute")
+    .min(1, "Thời gian tối thiểu phải là 1 phút")
     .max(300),
   deadline: z.string().datetime().optional().nullable(),
 });
@@ -110,35 +110,35 @@ export const PublishQuizSchema = z.object({
 });
 
 export const ExtendDeadlineSchema = z.object({
-  deadline: z.string().datetime("Invalid deadline format"),
+  deadline: z.string().datetime("Định dạng hạn chót không hợp lệ"),
 });
 
 // ---------- Question Bank ----------
 
 const MCQContentSchema = z.object({
   type: z.literal("MCQ"),
-  prompt: z.string().min(1, "Question prompt is required"),
+  prompt: z.string().min(1, "Cần có nội dung câu hỏi"),
   options: z
     .array(z.string().min(1))
-    .min(2, "At least 2 options required")
+    .min(2, "Cần ít nhất 2 đáp án")
     .max(10),
   correctOptionIndex: z
     .number()
     .int()
-    .min(0, "correctOptionIndex must be non-negative"),
+    .min(0, "correctOptionIndex không được âm"),
   explanation: z.string().optional(),
 });
 
 const ShortAnswerContentSchema = z.object({
   type: z.literal("SHORT_ANSWER"),
-  prompt: z.string().min(1, "Question prompt is required"),
-  correctAnswer: z.string().min(1, "Correct answer is required"),
+  prompt: z.string().min(1, "Cần có nội dung câu hỏi"),
+  correctAnswer: z.string().min(1, "Cần có đáp án đúng"),
   explanation: z.string().optional(),
 });
 
 const CalculationContentSchema = z.object({
   type: z.literal("CALCULATION"),
-  promptTemplate: z.string().min(1, "Prompt template is required"),
+  promptTemplate: z.string().min(1, "Cần có mẫu câu hỏi"),
   variables: z
     .array(
       z.object({
@@ -148,8 +148,8 @@ const CalculationContentSchema = z.object({
         decimals: z.number().int().min(0).max(10).optional(),
       })
     )
-    .min(1, "At least 1 variable required"),
-  answerFormula: z.string().min(1, "Answer formula is required"),
+    .min(1, "Cần ít nhất 1 biến"),
+  answerFormula: z.string().min(1, "Cần có công thức tính đáp án"),
   explanation: z.string().optional(),
 });
 
@@ -185,7 +185,7 @@ const MCQAnswerSchema = z.object({
 
 const ShortAnswerAnswerSchema = z.object({
   type: z.literal("SHORT_ANSWER"),
-  text: z.string().min(1, "Answer text is required"),
+  text: z.string().min(1, "Cần có nội dung câu trả lời"),
 });
 
 const CalculationAnswerSchema = z.object({
@@ -200,13 +200,13 @@ export const StudentAnswerValueSchema = z.discriminatedUnion("type", [
 ]);
 
 export const StartAttemptSchema = z.object({
-  quizId: z.string().cuid("Invalid quiz ID"),
+  quizId: z.string().cuid("ID bài kiểm tra không hợp lệ"),
 });
 
 export const SaveAnswerSchema = z.object({
   answers: z.array(
     z.object({
-      questionBankItemId: z.string().cuid("Invalid question ID"),
+      questionBankItemId: z.string().cuid("ID câu hỏi không hợp lệ"),
       partialAnswer: z.boolean().optional(),
       answer: StudentAnswerValueSchema,
     })
@@ -217,24 +217,24 @@ export const SubmitAttemptSchema = z.object({
   answers: z
     .array(
       z.object({
-        questionBankItemId: z.string().cuid("Invalid question ID"),
+        questionBankItemId: z.string().cuid("ID câu hỏi không hợp lệ"),
         answer: StudentAnswerValueSchema,
       })
     )
-    .min(1, "At least one answer required"),
+    .min(1, "Cần ít nhất một câu trả lời"),
 });
 
 // ---------- Reports ----------
 
 export const CreateReportSchema = z.object({
-  studentAnswerId: z.string().cuid("Invalid answer ID"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(1000),
+  studentAnswerId: z.string().cuid("ID câu trả lời không hợp lệ"),
+  description: z.string().min(10, "Mô tả phải có ít nhất 10 ký tự").max(1000),
 });
 
 // ---------- Lecture planning chat ----------
 
 export const LectureProposalSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200),
+  title: z.string().min(1, "Cần có tiêu đề").max(200),
   startPage: z.number().int().min(0).max(100000),
   endPage: z.number().int().min(0).max(100000),
   description: z.string().max(1000).optional(),
@@ -242,8 +242,8 @@ export const LectureProposalSchema = z.object({
 
 export const LectureProposalsSchema = z
   .array(LectureProposalSchema)
-  .min(1, "At least one lecture proposal is required")
-  .max(50, "Too many lecture proposals");
+  .min(1, "Cần ít nhất một đề xuất buổi giảng")
+  .max(50, "Quá nhiều đề xuất buổi giảng");
 
 /**
  * Shape of a lecture produced by the AI when a plan is confirmed.
@@ -254,7 +254,7 @@ export const LectureProposalsSchema = z
  * from the database.
  */
 export const LectureFormatSchema = z.object({
-  title: z.string().trim().min(1, "Lecture title is required").max(200),
+  title: z.string().trim().min(1, "Cần có tiêu đề buổi giảng").max(200),
   sourceRef: z
     .object({
       startPage: z.coerce.number().int().min(0).max(100000),

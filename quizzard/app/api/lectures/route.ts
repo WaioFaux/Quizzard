@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     const classId = searchParams.get("classId");
     if (!classId) {
-      throw new ValidationError("classId query parameter is required");
+      throw new ValidationError("Cần có tham số classId");
     }
 
     const lectures = await listLectures(classId, session.userId);
@@ -40,10 +40,10 @@ export async function POST(req: NextRequest) {
       const { classId, materialId } = body;
 
       if (!classId || typeof classId !== "string") {
-        throw new ValidationError("classId is required for lecture proposal");
+        throw new ValidationError("Cần có classId để đề xuất buổi giảng");
       }
       if (!materialId || typeof materialId !== "string") {
-        throw new ValidationError("materialId is required for lecture proposal");
+        throw new ValidationError("Cần có materialId để đề xuất buổi giảng");
       }
 
       const proposals = await proposeLecturesFromMaterial(classId, session.userId, materialId);

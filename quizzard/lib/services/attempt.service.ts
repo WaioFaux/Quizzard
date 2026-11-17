@@ -59,7 +59,7 @@ export async function startAttempt(studentId: string, quizId: string) {
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   // Check student is enrolled
@@ -67,7 +67,7 @@ export async function startAttempt(studentId: string, quizId: string) {
     (e) => e.studentId === studentId
   );
   if (!isEnrolled) {
-    throw new AuthorizationError("You are not enrolled in this class");
+    throw new AuthorizationError("Bạn chưa tham gia lớp này");
   }
 
   // Check quiz is published
@@ -91,7 +91,7 @@ export async function startAttempt(studentId: string, quizId: string) {
     if (existingAttempt.status === AttemptStatus.IN_PROGRESS) {
       throw new AttemptInProgressError();
     }
-    throw new AuthorizationError("You have already completed this quiz");
+    throw new AuthorizationError("Bạn đã hoàn thành bài kiểm tra này");
   }
 
   // Draw N random questions from APPROVED pool
@@ -99,7 +99,7 @@ export async function startAttempt(studentId: string, quizId: string) {
   const drawCount = Math.min(quiz.questionsPerAttempt, poolSize);
 
   if (drawCount === 0) {
-    throw new AuthorizationError("No approved questions available for this quiz");
+    throw new AuthorizationError("Bài kiểm tra này chưa có câu hỏi nào được duyệt");
   }
 
   const seed = hashSeed(studentId, quizId);
@@ -224,11 +224,11 @@ export async function getAttempt(
   });
 
   if (!attempt) {
-    throw new NotFoundError("Attempt");
+    throw new NotFoundError("Lượt làm bài");
   }
 
   if (attempt.studentId !== studentId) {
-    throw new AuthorizationError("This is not your attempt");
+    throw new AuthorizationError("Đây không phải lượt làm bài của bạn");
   }
 
   return attempt;
@@ -248,15 +248,15 @@ export async function saveAnswer(
   });
 
   if (!attempt) {
-    throw new NotFoundError("Attempt");
+    throw new NotFoundError("Lượt làm bài");
   }
 
   if (attempt.studentId !== studentId) {
-    throw new AuthorizationError("This is not your attempt");
+    throw new AuthorizationError("Đây không phải lượt làm bài của bạn");
   }
 
   if (attempt.status !== AttemptStatus.IN_PROGRESS) {
-    throw new AuthorizationError("Attempt already submitted");
+    throw new AuthorizationError("Lượt làm bài đã được nộp");
   }
 
   // Upsert answers
@@ -319,15 +319,15 @@ export async function submitAttempt(
   });
 
   if (!attempt) {
-    throw new NotFoundError("Attempt");
+    throw new NotFoundError("Lượt làm bài");
   }
 
   if (attempt.studentId !== studentId) {
-    throw new AuthorizationError("This is not your attempt");
+    throw new AuthorizationError("Đây không phải lượt làm bài của bạn");
   }
 
   if (attempt.status !== AttemptStatus.IN_PROGRESS) {
-    throw new AuthorizationError("Attempt already submitted");
+    throw new AuthorizationError("Lượt làm bài đã được nộp");
   }
 
   // Transition attempt status

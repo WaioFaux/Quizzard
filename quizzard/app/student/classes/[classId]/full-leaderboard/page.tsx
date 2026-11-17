@@ -56,7 +56,7 @@ export default function ClassFullLeaderboardPage({
         setClass(data.data);
       }
     } catch {
-      toast({ title: "Error", description: "Failed to load class", variant: "destructive" });
+      toast({ title: "Lỗi", description: "Không thể tải thông tin lớp", variant: "destructive" });
     } finally {
       setIsLoadingClass(false);
     }
@@ -75,12 +75,12 @@ export default function ClassFullLeaderboardPage({
     try {
       const res = await fetch(`/api/classes/${classId}/leaderboard`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load leaderboard");
+      if (!res.ok) throw new Error(data.error || "Không thể tải bảng xếp hạng");
       setLeaderboard(data.data || []);
     } catch (err) {
       toast({
-        title: "Error",
-        description: err instanceof Error ? err.message : "Failed to load leaderboard",
+        title: "Lỗi",
+        description: err instanceof Error ? err.message : "Không thể tải bảng xếp hạng",
         variant: "destructive",
       });
     } finally {
@@ -136,11 +136,11 @@ export default function ClassFullLeaderboardPage({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          {cls?.name || "Class"}
+          {cls?.name || "Lớp"}
         </Button>
       </div>
-      <h1 className="text-2xl font-bold mb-2">Class Leaderboard</h1>
-      <p className="text-muted-foreground mb-6">Total points from all quizzes</p>
+      <h1 className="text-2xl font-bold mb-2">Bảng xếp hạng lớp</h1>
+      <p className="text-muted-foreground mb-6">Tổng điểm từ tất cả các bài kiểm tra</p>
 
       {isLoadingBoard ? (
         <div className="space-y-2">
@@ -162,8 +162,8 @@ export default function ClassFullLeaderboardPage({
           >
             <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
           </svg>
-          <p className="text-muted-foreground">No quiz results yet in this class</p>
-          <p className="text-sm text-muted-foreground mt-1">Complete quizzes to appear on the leaderboard!</p>
+          <p className="text-muted-foreground">Chưa có kết quả bài kiểm tra nào trong lớp này</p>
+          <p className="text-sm text-muted-foreground mt-1">Hoàn thành bài kiểm tra để xuất hiện trên bảng xếp hạng!</p>
         </Card>
       ) : (
         <div className="max-w-2xl mx-auto">
@@ -176,10 +176,10 @@ export default function ClassFullLeaderboardPage({
                 </div>
                 <p className="font-medium text-center max-w-[100px] truncate">{leaderboard[1].studentName}</p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[1].score, leaderboard[1].totalQuizzes)}`}>
-                  {leaderboard[1].score} pts
+                  {leaderboard[1].score} điểm
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {leaderboard[1].quizzesCompleted}/{leaderboard[1].totalQuizzes} quizzes
+                  {leaderboard[1].quizzesCompleted}/{leaderboard[1].totalQuizzes} bài kiểm tra
                 </p>
                 <div className="w-20 h-16 bg-gray-300 rounded-t-lg flex items-center justify-center text-lg font-bold">2</div>
               </div>
@@ -189,10 +189,10 @@ export default function ClassFullLeaderboardPage({
                 </div>
                 <p className="font-semibold text-center max-w-[120px] truncate">{leaderboard[0].studentName}</p>
                 <p className={`text-2xl font-bold ${getScoreColor(leaderboard[0].score, leaderboard[0].totalQuizzes)}`}>
-                  {leaderboard[0].score} pts
+                  {leaderboard[0].score} điểm
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {leaderboard[0].quizzesCompleted}/{leaderboard[0].totalQuizzes} quizzes
+                  {leaderboard[0].quizzesCompleted}/{leaderboard[0].totalQuizzes} bài kiểm tra
                 </p>
                 <div className="w-24 h-20 bg-amber-400 rounded-t-lg flex items-center justify-center text-2xl font-bold">1</div>
               </div>
@@ -202,10 +202,10 @@ export default function ClassFullLeaderboardPage({
                 </div>
                 <p className="font-medium text-center max-w-[100px] truncate">{leaderboard[2].studentName}</p>
                 <p className={`text-xl font-bold ${getScoreColor(leaderboard[2].score, leaderboard[2].totalQuizzes)}`}>
-                  {leaderboard[2].score} pts
+                  {leaderboard[2].score} điểm
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {leaderboard[2].quizzesCompleted}/{leaderboard[2].totalQuizzes} quizzes
+                  {leaderboard[2].quizzesCompleted}/{leaderboard[2].totalQuizzes} bài kiểm tra
                 </p>
                 <div className="w-20 h-12 bg-amber-600 rounded-t-lg flex items-center justify-center text-lg font-bold text-white">3</div>
               </div>
@@ -215,9 +215,9 @@ export default function ClassFullLeaderboardPage({
           {/* Rankings List */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">All Rankings</CardTitle>
+              <CardTitle className="text-lg">Bảng xếp hạng đầy đủ</CardTitle>
               <CardDescription>
-                {leaderboard.length} student{leaderboard.length !== 1 ? "s" : ""} with results
+                {leaderboard.length} học sinh có kết quả
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -248,17 +248,17 @@ export default function ClassFullLeaderboardPage({
                           <div>
                             <p className="font-medium flex items-center gap-2">
                               {entry.studentName}
-                              {isCurrentUser && <Badge variant="secondary" className="text-xs">You</Badge>}
+                              {isCurrentUser && <Badge variant="secondary" className="text-xs">Bạn</Badge>}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {entry.quizzesCompleted}/{entry.totalQuizzes} quizzes completed
+                              {entry.quizzesCompleted}/{entry.totalQuizzes} bài kiểm tra đã hoàn thành
                             </p>
                           </div>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`text-xl font-bold ${getScoreColor(entry.score, entry.totalQuizzes)}`}>
-                          {entry.score} pts
+                          {entry.score} điểm
                         </p>
                       </div>
                     </div>

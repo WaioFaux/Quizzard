@@ -33,18 +33,18 @@ export async function GET(
     });
 
     if (!classData) {
-      throw new AuthorizationError("Class not found");
+      throw new AuthorizationError("Không tìm thấy lớp");
     }
 
     // Authorization
     if (session.role === "TEACHER" && classData.teacherId !== session.userId) {
-      throw new AuthorizationError("You do not own this class");
+      throw new AuthorizationError("Bạn không sở hữu lớp này");
     }
     if (
       session.role === "STUDENT" &&
       !classData.enrollments.some((e) => e.studentId === session.userId)
     ) {
-      throw new AuthorizationError("You are not enrolled in this class");
+      throw new AuthorizationError("Bạn chưa tham gia lớp này");
     }
 
     // Get all published quiz IDs

@@ -105,7 +105,7 @@ export function ChatPanel({
 
       if (!response.ok) {
         throw new Error(
-          await readErrorMessage(response, "Failed to start chat session")
+          await readErrorMessage(response, "Không thể bắt đầu phiên trò chuyện")
         );
       }
 
@@ -117,7 +117,7 @@ export function ChatPanel({
       });
     } catch (err) {
       console.error("[ChatPanel] Error starting session:", err);
-      setError(err instanceof Error ? err.message : "Failed to start chat");
+      setError(err instanceof Error ? err.message : "Không thể bắt đầu trò chuyện");
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +157,7 @@ export function ChatPanel({
 
       if (!response.ok) {
         throw new Error(
-          await readErrorMessage(response, "Failed to send message")
+          await readErrorMessage(response, "Không thể gửi tin nhắn")
         );
       }
 
@@ -177,7 +177,7 @@ export function ChatPanel({
       );
     } catch (err) {
       console.error("[ChatPanel] Error sending message:", err);
-      setError(err instanceof Error ? err.message : "Failed to send message");
+      setError(err instanceof Error ? err.message : "Không thể gửi tin nhắn");
     } finally {
       setIsLoading(false);
     }
@@ -204,7 +204,7 @@ export function ChatPanel({
 
       if (!response.ok) {
         throw new Error(
-          await readErrorMessage(response, "Failed to confirm plan")
+          await readErrorMessage(response, "Không thể xác nhận kế hoạch")
         );
       }
 
@@ -227,7 +227,7 @@ export function ChatPanel({
       onLecturesCreated?.();
     } catch (err) {
       console.error("[ChatPanel] Error confirming plan:", err);
-      setError(err instanceof Error ? err.message : "Failed to confirm plan");
+      setError(err instanceof Error ? err.message : "Không thể xác nhận kế hoạch");
     } finally {
       setIsLoading(false);
     }
@@ -252,7 +252,7 @@ export function ChatPanel({
 
       if (!response.ok) {
         throw new Error(
-          await readErrorMessage(response, "Failed to update proposals")
+          await readErrorMessage(response, "Không thể cập nhật các đề xuất")
         );
       }
 
@@ -266,7 +266,7 @@ export function ChatPanel({
                 ...prev.messages,
                 {
                   role: "assistant",
-                  content: "I've updated the lecture proposals based on your changes.",
+                  content: "Tôi đã cập nhật các đề xuất buổi giảng dựa trên thay đổi của bạn.",
                 },
               ],
             }
@@ -275,7 +275,7 @@ export function ChatPanel({
       setIsEditing(false);
     } catch (err) {
       console.error("[ChatPanel] Error updating proposals:", err);
-      setError(err instanceof Error ? err.message : "Failed to update proposals");
+      setError(err instanceof Error ? err.message : "Không thể cập nhật các đề xuất");
     } finally {
       setIsLoading(false);
     }
@@ -327,8 +327,8 @@ export function ChatPanel({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b">
         <div>
-          <h2 className="font-semibold text-lg">AI Lecture Planner</h2>
-          <p className="text-xs text-muted-foreground">Plan lectures from your document</p>
+          <h2 className="font-semibold text-lg">Trình lập kế hoạch buổi giảng AI</h2>
+          <p className="text-xs text-muted-foreground">Lập kế hoạch buổi giảng từ tài liệu của bạn</p>
         </div>
         <Button variant="ghost" size="icon" onClick={endSession}>
           <svg
@@ -382,7 +382,7 @@ export function ChatPanel({
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-muted rounded-lg px-4 py-2">
-                <p className="text-sm text-muted-foreground">Thinking...</p>
+                <p className="text-sm text-muted-foreground">Đang suy nghĩ...</p>
               </div>
             </div>
           )}
@@ -396,10 +396,10 @@ export function ChatPanel({
         <div className="border-t">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-sm">Lecture Proposals</h3>
+              <h3 className="font-medium text-sm">Các đề xuất buổi giảng</h3>
               {!isEditing && !chatState.createdLectures && (
                 <Button variant="ghost" size="sm" onClick={startEditing}>
-                  Edit
+                  Sửa
                 </Button>
               )}
             </div>
@@ -414,7 +414,7 @@ export function ChatPanel({
                         onChange={(e) =>
                           updateEditedProposal(i, "title", e.target.value)
                         }
-                        placeholder="Lecture title"
+                        placeholder="Tiêu đề buổi giảng"
                         className="h-8"
                       />
                       <div className="flex gap-2">
@@ -424,17 +424,17 @@ export function ChatPanel({
                           onChange={(e) =>
                             updateEditedProposal(i, "startPage", parseInt(e.target.value) || 0)
                           }
-                          placeholder="Start"
+                          placeholder="Bắt đầu"
                           className="w-20 h-8"
                         />
-                        <span className="self-center text-muted-foreground">to</span>
+                        <span className="self-center text-muted-foreground">đến</span>
                         <Input
                           type="number"
                           value={proposal.endPage}
                           onChange={(e) =>
                             updateEditedProposal(i, "endPage", parseInt(e.target.value) || 0)
                           }
-                          placeholder="End"
+                          placeholder="Kết thúc"
                           className="w-20 h-8"
                         />
                       </div>
@@ -443,10 +443,10 @@ export function ChatPanel({
                 ))}
                 <div className="flex gap-2">
                   <Button size="sm" onClick={saveEditedProposals} disabled={isLoading}>
-                    Save Changes
+                    Lưu thay đổi
                   </Button>
                   <Button variant="ghost" size="sm" onClick={cancelEditing}>
-                    Cancel
+                    Hủy
                   </Button>
                 </div>
               </div>
@@ -478,7 +478,7 @@ export function ChatPanel({
       {chatState?.createdLectures && chatState.createdLectures.length > 0 && (
         <div className="mx-4 mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-md">
           <p className="text-sm text-green-700 dark:text-green-400">
-            Successfully created {chatState.createdLectures.length} lecture(s) with quiz drafts!
+            Đã tạo thành công {chatState.createdLectures.length} buổi giảng kèm bài kiểm tra nháp!
           </p>
         </div>
       )}
@@ -492,7 +492,7 @@ export function ChatPanel({
               onClick={confirmPlan}
               disabled={isLoading}
             >
-              {isLoading ? "Generating..." : "Confirm Plan"}
+              {isLoading ? "Đang tạo..." : "Xác nhận kế hoạch"}
             </Button>
           )}
         </div>
@@ -511,12 +511,12 @@ export function ChatPanel({
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about the document or request changes..."
+              placeholder="Hỏi về tài liệu hoặc yêu cầu thay đổi..."
               disabled={isLoading}
               className="flex-1"
             />
             <Button type="submit" disabled={isLoading || !input.trim()}>
-              Send
+              Gửi
             </Button>
           </form>
         </div>

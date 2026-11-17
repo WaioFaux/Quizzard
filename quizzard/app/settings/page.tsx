@@ -146,7 +146,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Failed to update profile");
+        throw new Error(data.message || "Không thể cập nhật hồ sơ");
       }
 
       setUser(data.data);
@@ -190,7 +190,7 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Failed to change password");
+        throw new Error(data.message || "Không thể thay đổi mật khẩu");
       }
 
       setCurrentPassword("");
@@ -466,7 +466,7 @@ export default function SettingsPage() {
                         <div className="flex items-center justify-between w-full">
                           <span className="font-medium">{model.name}</span>
                           <div className="flex items-center gap-2 ml-4">
-                            {model.isFree && <Badge variant="secondary">Free</Badge>}
+                            {model.isFree && <Badge variant="secondary">Miễn phí</Badge>}
                             <span className="text-xs text-muted-foreground">
                               {formatContextLength(model.contextLength)}
                             </span>
@@ -496,9 +496,9 @@ export default function SettingsPage() {
                     {getModelById(selectedModel)?.description}
                   </p>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                    <span>Context: {formatContextLength(getModelById(selectedModel)?.contextLength || 0)}</span>
+                    <span>Ngữ cảnh: {formatContextLength(getModelById(selectedModel)?.contextLength || 0)}</span>
                     {getModelById(selectedModel)?.price && (
-                      <span>Price: {formatPrice(getModelById(selectedModel)?.price)}</span>
+                      <span>Giá: {formatPrice(getModelById(selectedModel)?.price)}</span>
                     )}
                   </div>
                 </div>
@@ -510,9 +510,9 @@ export default function SettingsPage() {
                   Lưu ý về giới hạn
                 </h4>
                 <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
-                  <li>Gemini: 15 requests/minute, 1500 requests/day (free tier)</li>
-                  <li>OpenRouter Free: 50 requests/day</li>
-                  <li>OpenRouter Paid: Tùy thuộc vào mô hình và credits</li>
+                  <li>Gemini: 15 yêu cầu/phút, 1500 yêu cầu/ngày (gói miễn phí)</li>
+                  <li>OpenRouter miễn phí: 50 yêu cầu/ngày</li>
+                  <li>OpenRouter trả phí: Tùy thuộc vào mô hình và số credits</li>
                 </ul>
               </div>
 
@@ -594,7 +594,7 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Loại tài khoản của bạn</p>
                 </div>
                 <Badge variant="secondary">
-                  {user?.role === "TEACHER" ? "Giáo viên" : "Sinh viên"}
+                  {user?.role === "TEACHER" ? "Giáo viên" : "Học sinh"}
                 </Badge>
               </div>
               <div className="flex items-center justify-between py-3 border-b">

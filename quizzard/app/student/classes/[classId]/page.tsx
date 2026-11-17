@@ -71,8 +71,8 @@ export default function StudentClassOverviewPage({
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load class",
+        title: "Lỗi",
+        description: "Không thể tải thông tin lớp",
         variant: "destructive",
       });
     } finally {
@@ -106,32 +106,32 @@ export default function StudentClassOverviewPage({
 
     const attempt = attempts[quiz.id];
     if (attempt) {
-      return { label: "Completed", variant: "default" as const };
+      return { label: "Đã hoàn thành", variant: "default" as const };
     }
 
     if (quiz.status === "PUBLISHED") {
       if (quiz.deadline && new Date(quiz.deadline) < new Date()) {
-        return { label: "Missed", variant: "destructive" as const };
+        return { label: "Đã quá hạn", variant: "destructive" as const };
       }
-      return { label: "Available", variant: "default" as const };
+      return { label: "Đang mở", variant: "default" as const };
     }
-    return { label: "Coming Soon", variant: "secondary" as const };
+    return { label: "Sắp mở", variant: "secondary" as const };
   }
 
   function formatDeadline(deadline: string | null) {
-    if (!deadline) return "No deadline";
+    if (!deadline) return "Không hạn chót";
     const date = new Date(deadline);
     const now = new Date();
     const diff = date.getTime() - now.getTime();
 
-    if (diff < 0) return "Deadline passed";
+    if (diff < 0) return "Đã quá hạn";
 
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days === 0) return "Due today";
-    if (days === 1) return "Due tomorrow";
-    if (days < 7) return `Due in ${days} days`;
+    if (days === 0) return "Hạn chót hôm nay";
+    if (days === 1) return "Hạn chót ngày mai";
+    if (days < 7) return `Hạn chót sau ${days} ngày`;
 
-    return `Due ${date.toLocaleDateString()}`;
+    return `Hạn chót ${date.toLocaleDateString("vi-VN")}`;
   }
 
   if (isLoading) {
@@ -150,9 +150,9 @@ export default function StudentClassOverviewPage({
     return (
       <div className="p-6">
         <Card className="flex flex-col items-center justify-center py-12">
-          <h3 className="text-lg font-semibold mb-2">Class not found</h3>
+          <h3 className="text-lg font-semibold mb-2">Không tìm thấy lớp</h3>
           <Button variant="outline" onClick={() => router.push("/student/classes")}>
-            Back to Classes
+            Quay lại danh sách lớp
           </Button>
         </Card>
       </div>
@@ -177,7 +177,7 @@ export default function StudentClassOverviewPage({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          My Classes
+          Lớp của tôi
         </Button>
       </div>
 
@@ -185,7 +185,7 @@ export default function StudentClassOverviewPage({
         <div>
           <h1 className="text-2xl font-bold">{cls.name}</h1>
           <p className="text-muted-foreground mt-1">
-            Teacher: {cls.teacher.name}
+            Giáo viên: {cls.teacher.name}
           </p>
           {cls.description && (
             <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
@@ -209,7 +209,7 @@ export default function StudentClassOverviewPage({
             >
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </svg>
-            Class Leaderboard
+            Bảng xếp hạng lớp
           </Button>
           <Button variant="outline" onClick={() => router.push(`/student/classes/${classId}/leaderboard`)}>
             <svg
@@ -231,20 +231,20 @@ export default function StudentClassOverviewPage({
               <path d="M19.96 11.071a3 3 0 0 0 0-1.142" />
               <path d="M12 10v4" />
             </svg>
-            Per Quiz
+            Theo từng bài
           </Button>
         </div>
         <Button variant="outline" onClick={() => router.push("/student/classes/join")}>
-          Leave Class
+          Rời lớp
         </Button>
       </div>
 
       <div className="space-y-4">
         {cls.lectures.length === 0 ? (
           <Card className="flex flex-col items-center justify-center py-12">
-            <p className="text-muted-foreground">No quizzes available yet</p>
+            <p className="text-muted-foreground">Chưa có bài kiểm tra nào</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Check back later for quizzes from your teacher
+              Hãy quay lại sau để xem các bài kiểm tra từ giáo viên của bạn
             </p>
           </Card>
         ) : (
@@ -266,9 +266,9 @@ export default function StudentClassOverviewPage({
                       <p className="font-medium">{lecture.title}</p>
                       {quiz && (
                         <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                          <span>{quiz.questionsPerAttempt} questions</span>
+                          <span>{quiz.questionsPerAttempt} câu hỏi</span>
                           <span className="text-muted-foreground/50">|</span>
-                          <span>{quiz.timeLimitMinutes} minutes</span>
+                          <span>{quiz.timeLimitMinutes} phút</span>
                           <span className="text-muted-foreground/50">|</span>
                           <span>{formatDeadline(quiz.deadline)}</span>
                         </div>
@@ -287,7 +287,7 @@ export default function StudentClassOverviewPage({
                           router.push(`/student/classes/${classId}/quiz/${quiz?.id}/results?attemptId=${attempt.id}`)
                         }
                       >
-                        View Results
+                        Xem kết quả
                       </Button>
                     )}
                     {isAvailable && (
@@ -295,7 +295,7 @@ export default function StudentClassOverviewPage({
                         size="sm"
                         onClick={() => router.push(`/student/classes/${classId}/quiz/${quiz.id}`)}
                       >
-                        Start Quiz
+                        Bắt đầu làm bài
                       </Button>
                     )}
                   </div>

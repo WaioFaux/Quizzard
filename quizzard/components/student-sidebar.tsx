@@ -24,7 +24,7 @@ export function StudentSidebar({ studentName, avatarUrl }: StudentSidebarProps) 
     }
   }
 
-  const initial = studentName?.charAt(0).toUpperCase() || "S";
+  const initial = studentName?.charAt(0).toUpperCase() || "H";
 
   return (
     <aside className="w-60 shrink-0 border-r bg-sidebar text-sidebar-foreground flex flex-col h-screen">
@@ -74,7 +74,7 @@ export function StudentSidebar({ studentName, avatarUrl }: StudentSidebarProps) 
           {avatarUrl ? (
             <img
               src={avatarUrl}
-              alt={studentName || "Avatar"}
+              alt={studentName || "Ảnh đại diện"}
               className="w-9 h-9 rounded-full object-cover"
             />
           ) : (
@@ -83,7 +83,7 @@ export function StudentSidebar({ studentName, avatarUrl }: StudentSidebarProps) 
             </div>
           )}
           <div className="leading-tight">
-            <p className="text-sm font-medium text-sidebar-foreground">{studentName || "Student"}</p>
+            <p className="text-sm font-medium text-sidebar-foreground">{studentName || "Học sinh"}</p>
             <p className="text-xs text-sidebar-foreground/60">Sinh viên</p>
           </div>
         </div>

@@ -26,6 +26,6 @@ export function handleApiError(error: unknown) {
   const devError =
     process.env.NODE_ENV === "development" && error instanceof Error
       ? error.message
-      : "An unexpected error occurred";
+      : "Đã xảy ra lỗi không mong muốn";
   return Response.json({ error: devError }, { status: 500 });
 }

@@ -45,11 +45,11 @@ export async function POST(req: NextRequest) {
     const { action, materialId, classId, message, proposals } = body;
 
     if (!materialId) {
-      throw new ValidationError("materialId is required");
+      throw new ValidationError("Cần có materialId");
     }
 
     if (!action) {
-      throw new ValidationError("action is required");
+      throw new ValidationError("Cần có action");
     }
 
     console.log(`[API /materials/[materialId]/chat] Action: ${action}`, {
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     switch (action) {
       case "start": {
         if (!classId) {
-          throw new ValidationError("classId is required to start a chat session");
+          throw new ValidationError("Cần có classId để bắt đầu phiên trò chuyện");
         }
         result = await startChatSession(session.userId, classId, materialId, req.headers);
         logger.info("api.chat.start", {
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
       case "message": {
         if (!message || typeof message !== "string") {
-          throw new ValidationError("message is required for chat action");
+          throw new ValidationError("Cần có message cho thao tác trò chuyện");
         }
         result = await sendChatMessage(
           session.userId,
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
       case "end": {
         // Nothing to clean up - the client owns the conversation state.
-        return Response.json({ data: { success: true, message: "Chat session ended" } });
+        return Response.json({ data: { success: true, message: "Đã kết thúc phiên trò chuyện" } });
       }
 
       default:
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
 function parseProposals(proposals: unknown, required = false) {
   if (proposals === undefined || proposals === null) {
     if (required) {
-      throw new ValidationError("proposals array is required for this action");
+      throw new ValidationError("Cần có mảng proposals cho thao tác này");
     }
     return [];
   }
@@ -155,7 +155,7 @@ function parseProposals(proposals: unknown, required = false) {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     throw new ValidationError(
-      issue ? `${issue.path.join(".") || "proposals"}: ${issue.message}` : "Invalid proposals"
+      issue ? `${issue.path.join(".") || "proposals"}: ${issue.message}` : "Đề xuất không hợp lệ"
     );
   }
 

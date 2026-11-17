@@ -99,7 +99,7 @@ export class RateLimitExceededError extends Error {
   constructor(
     public readonly retryAfterMs: number
   ) {
-    super("Too many requests");
+    super("Quá nhiều yêu cầu");
     this.name = "RateLimitExceededError";
   }
 }
@@ -136,7 +136,7 @@ export function getRateLimitHeaders(
 export function rateLimitResponse(retryAfterMs: number) {
   const retryAfterSec = Math.ceil(retryAfterMs / 1000);
   return NextResponse.json(
-    { error: "Too many requests. Please try again later." },
+    { error: "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau." },
     {
       status: 429,
       headers: {

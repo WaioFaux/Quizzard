@@ -164,7 +164,7 @@ export default function TeacherAnalyticsPage() {
   if (isLoading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Analytics</h1>
+        <h1 className="text-2xl font-bold mb-6">Phân tích</h1>
         <div className="grid grid-cols-4 gap-4 mb-8">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-24 w-full" />
@@ -181,20 +181,20 @@ export default function TeacherAnalyticsPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Analytics</h1>
+      <h1 className="text-2xl font-bold mb-6">Phân tích</h1>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-4 gap-4 mb-8">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{overview?.totalClasses ?? 0}</div>
-            <p className="text-sm text-muted-foreground">Total classes</p>
+            <p className="text-sm text-muted-foreground">Tổng số lớp</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{overview?.totalStudents ?? 0}</div>
-            <p className="text-sm text-muted-foreground">Total students</p>
+            <p className="text-sm text-muted-foreground">Tổng số học sinh</p>
           </CardContent>
         </Card>
         <Card>
@@ -204,7 +204,7 @@ export default function TeacherAnalyticsPage() {
                 ? `${Math.round(overview.overallAvgScore)}%`
                 : "—"}
             </div>
-            <p className="text-sm text-muted-foreground">Overall avg score</p>
+            <p className="text-sm text-muted-foreground">Điểm trung bình tổng thể</p>
           </CardContent>
         </Card>
         <Card>
@@ -213,19 +213,19 @@ export default function TeacherAnalyticsPage() {
               {overview?.totalPendingReports ?? 0}
               {(overview?.totalPendingReports ?? 0) > 0 && (
                 <Badge variant="destructive" className="text-xs">
-                  Action needed
+                  Cần xử lý
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">Pending reports</p>
+            <p className="text-sm text-muted-foreground">Báo cáo đang chờ</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="leaderboards">Leaderboards</TabsTrigger>
+          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="leaderboards">Bảng xếp hạng</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -233,10 +233,10 @@ export default function TeacherAnalyticsPage() {
           <div className="grid grid-cols-3 gap-6">
             {/* Per-Class Cards */}
             <div className="col-span-2 space-y-4">
-              <h2 className="text-lg font-semibold">Classes</h2>
+              <h2 className="text-lg font-semibold">Lớp</h2>
               {classes.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground">No classes yet</p>
+                  <p className="text-muted-foreground">Chưa có lớp nào</p>
                 </Card>
               ) : (
                 <div className="space-y-3">
@@ -257,21 +257,21 @@ export default function TeacherAnalyticsPage() {
                         </div>
                         <div className="grid grid-cols-4 gap-4 text-sm">
                           <div>
-                            <p className="text-muted-foreground">Students</p>
+                            <p className="text-muted-foreground">Học sinh</p>
                             <p className="font-semibold">{cls.studentCount}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Quizzes</p>
+                            <p className="text-muted-foreground">Bài kiểm tra</p>
                             <p className="font-semibold">{cls.quizCount}</p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Avg Score</p>
+                            <p className="text-muted-foreground">Điểm TB</p>
                             <p className={`font-semibold ${getScoreColor(cls.avgScore)}`}>
                               {cls.avgScore != null ? `${Math.round(cls.avgScore)}%` : "—"}
                             </p>
                           </div>
                           <div>
-                            <p className="text-muted-foreground">Completion</p>
+                            <p className="text-muted-foreground">Tỷ lệ hoàn thành</p>
                             <p className="font-semibold">{Math.round(cls.completionRate)}%</p>
                           </div>
                         </div>
@@ -284,10 +284,10 @@ export default function TeacherAnalyticsPage() {
 
             {/* Recent Submissions */}
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold">Recent Submissions</h2>
+              <h2 className="text-lg font-semibold">Bài nộp gần đây</h2>
               {recentSubmissions.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center py-12">
-                  <p className="text-muted-foreground text-sm">No submissions yet</p>
+                  <p className="text-muted-foreground text-sm">Chưa có bài nộp nào</p>
                 </Card>
               ) : (
                 <Card>
@@ -341,15 +341,15 @@ export default function TeacherAnalyticsPage() {
               >
                 <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
               </svg>
-              <p className="text-muted-foreground">No leaderboards available</p>
-              <p className="text-sm text-muted-foreground mt-1">Publish quizzes and have students complete them to see leaderboards</p>
+              <p className="text-muted-foreground">Chưa có bảng xếp hạng nào</p>
+              <p className="text-sm text-muted-foreground mt-1">Hãy xuất bản bài kiểm tra và để học sinh hoàn thành để xem bảng xếp hạng</p>
             </Card>
           ) : (
             <div className="space-y-6">
               {/* Class and View Selectors on one line */}
               <div className="flex gap-6 items-center w-full">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <label className="text-sm font-medium text-muted-foreground shrink-0">Class:</label>
+                  <label className="text-sm font-medium text-muted-foreground shrink-0">Lớp:</label>
                   <select
                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={selectedQuizLeaderboardClass || ""}
@@ -358,19 +358,19 @@ export default function TeacherAnalyticsPage() {
                       setSelectedQuizId("");
                     }}
                   >
-                    <option value="" disabled>Choose a class...</option>
+                    <option value="" disabled>Chọn một lớp...</option>
                     {classLeaderboards.map((cls) => {
                       const quizzesInClass = quizLeaderboards.filter(q => q.classId === cls.classId);
                       return (
                         <option key={cls.classId} value={cls.classId}>
-                          {cls.className} ({quizzesInClass.length} quiz{quizzesInClass.length !== 1 ? "zes" : ""})
+                          {cls.className} ({quizzesInClass.length} bài kiểm tra)
                         </option>
                       );
                     })}
                   </select>
                 </div>
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <label className="text-sm font-medium text-muted-foreground shrink-0">View:</label>
+                  <label className="text-sm font-medium text-muted-foreground shrink-0">Hiển thị:</label>
                   <select
                     className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={selectedQuizId || "all"}
@@ -382,12 +382,12 @@ export default function TeacherAnalyticsPage() {
                       }
                     }}
                   >
-                    <option value="all">All Quizzes (Class Leaderboard)</option>
+                    <option value="all">Tất cả bài kiểm tra (Bảng xếp hạng lớp)</option>
                     {selectedQuizLeaderboardClass && quizLeaderboards
                       .filter(quiz => quiz.classId === selectedQuizLeaderboardClass)
                       .map((quiz) => (
                         <option key={quiz.quizId} value={quiz.quizId}>
-                          Lecture {quiz.lectureOrder}: {quiz.quizTitle} ({quiz.totalParticipants} participant{quiz.totalParticipants !== 1 ? "s" : ""})
+                          Buổi {quiz.lectureOrder}: {quiz.quizTitle} ({quiz.totalParticipants} học sinh)
                         </option>
                       ))}
                   </select>
@@ -410,16 +410,16 @@ export default function TeacherAnalyticsPage() {
                 <div>
                   <div className="mb-4">
                     <h2 className="text-xl font-semibold">
-                      {selectedQuizLeaderboard.className} — Lecture {selectedQuizLeaderboard.lectureOrder}: {selectedQuizLeaderboard.quizTitle}
+                      {selectedQuizLeaderboard.className} — Buổi {selectedQuizLeaderboard.lectureOrder}: {selectedQuizLeaderboard.quizTitle}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      {selectedQuizLeaderboard.totalParticipants} student{selectedQuizLeaderboard.totalParticipants !== 1 ? "s" : ""} completed this quiz
+                      {selectedQuizLeaderboard.totalParticipants} học sinh đã hoàn thành bài kiểm tra này
                     </p>
                   </div>
 
                   {selectedQuizLeaderboard.leaderboard.length === 0 ? (
                     <Card className="flex flex-col items-center justify-center py-12">
-                      <p className="text-muted-foreground">No results for this quiz yet</p>
+                      <p className="text-muted-foreground">Chưa có kết quả cho bài kiểm tra này</p>
                     </Card>
                   ) : (
                     <div className="max-w-2xl">
@@ -434,7 +434,7 @@ export default function TeacherAnalyticsPage() {
                               {selectedQuizLeaderboard.leaderboard[1].studentName}
                             </p>
                             <p className={`text-lg font-bold ${getScoreColor(selectedQuizLeaderboard.leaderboard[1].score)}`}>
-                              {selectedQuizLeaderboard.leaderboard[1].score} pts
+                              {selectedQuizLeaderboard.leaderboard[1].score} điểm
                             </p>
                             <div className="w-16 h-14 bg-gray-300 rounded-t-lg flex items-center justify-center text-lg font-bold mt-2">2</div>
                           </div>
@@ -446,7 +446,7 @@ export default function TeacherAnalyticsPage() {
                               {selectedQuizLeaderboard.leaderboard[0].studentName}
                             </p>
                             <p className={`text-xl font-bold ${getScoreColor(selectedQuizLeaderboard.leaderboard[0].score)}`}>
-                              {selectedQuizLeaderboard.leaderboard[0].score} pts
+                              {selectedQuizLeaderboard.leaderboard[0].score} điểm
                             </p>
                             <div className="w-20 h-18 bg-amber-400 rounded-t-lg flex items-center justify-center text-xl font-bold mt-2">1</div>
                           </div>
@@ -458,7 +458,7 @@ export default function TeacherAnalyticsPage() {
                               {selectedQuizLeaderboard.leaderboard[2].studentName}
                             </p>
                             <p className={`text-lg font-bold ${getScoreColor(selectedQuizLeaderboard.leaderboard[2].score)}`}>
-                              {selectedQuizLeaderboard.leaderboard[2].score} pts
+                              {selectedQuizLeaderboard.leaderboard[2].score} điểm
                             </p>
                             <div className="w-16 h-10 bg-amber-600 rounded-t-lg flex items-center justify-center text-lg font-bold text-white mt-2">3</div>
                           </div>
@@ -468,7 +468,7 @@ export default function TeacherAnalyticsPage() {
                       {/* Rankings List */}
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-lg">All Rankings</CardTitle>
+                          <CardTitle className="text-lg">Bảng xếp hạng đầy đủ</CardTitle>
                           <CardDescription>
                             {selectedQuizLeaderboard.leaderboard.length} student{selectedQuizLeaderboard.leaderboard.length !== 1 ? "s" : ""} completed this quiz
                           </CardDescription>
@@ -492,7 +492,7 @@ export default function TeacherAnalyticsPage() {
                                   </div>
                                 </div>
                                 <p className={`text-xl font-bold ${getScoreColor(entry.score)}`}>
-                                  {entry.score} pts
+                                  {entry.score} điểm
                                 </p>
                               </div>
                             ))}
@@ -530,7 +530,7 @@ function ClassLeaderboardView({
   if (!classLeaderboard) {
     return (
       <Card className="flex flex-col items-center justify-center py-12">
-        <p className="text-muted-foreground">No data available</p>
+        <p className="text-muted-foreground">Không có dữ liệu</p>
       </Card>
     );
   }
@@ -541,20 +541,20 @@ function ClassLeaderboardView({
         <div>
           <h2 className="text-xl font-semibold">{classLeaderboard.className}</h2>
           <p className="text-sm text-muted-foreground">
-            {classLeaderboard.totalParticipants} students • {classLeaderboard.totalQuizzes} quizzes
+            {classLeaderboard.totalParticipants} học sinh • {classLeaderboard.totalQuizzes} bài kiểm tra
           </p>
         </div>
         <button
           onClick={onViewFullLeaderboard}
           className="text-sm text-primary hover:underline"
         >
-          View full leaderboard →
+          Xem bảng xếp hạng đầy đủ →
         </button>
       </div>
 
       {classLeaderboard.leaderboard.length === 0 ? (
         <Card className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground">No quiz results in this class yet</p>
+          <p className="text-muted-foreground">Chưa có kết quả bài kiểm tra nào trong lớp này</p>
         </Card>
       ) : (
         <div className="max-w-2xl">
@@ -569,10 +569,10 @@ function ClassLeaderboardView({
                   {classLeaderboard.leaderboard[1].studentName}
                 </p>
                 <p className={`text-lg font-bold ${getScoreColor(classLeaderboard.leaderboard[1].totalScore)}`}>
-                  {classLeaderboard.leaderboard[1].totalScore} pts
+                  {classLeaderboard.leaderboard[1].totalScore} điểm
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {classLeaderboard.leaderboard[1].quizzesCompleted}/{classLeaderboard.leaderboard[1].totalQuizzes} quizzes
+                  {classLeaderboard.leaderboard[1].quizzesCompleted}/{classLeaderboard.leaderboard[1].totalQuizzes} bài kiểm tra
                 </p>
                 <div className="w-16 h-14 bg-gray-300 rounded-t-lg flex items-center justify-center text-lg font-bold mt-2">2</div>
               </div>
@@ -584,10 +584,10 @@ function ClassLeaderboardView({
                   {classLeaderboard.leaderboard[0].studentName}
                 </p>
                 <p className={`text-xl font-bold ${getScoreColor(classLeaderboard.leaderboard[0].totalScore)}`}>
-                  {classLeaderboard.leaderboard[0].totalScore} pts
+                  {classLeaderboard.leaderboard[0].totalScore} điểm
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {classLeaderboard.leaderboard[0].quizzesCompleted}/{classLeaderboard.leaderboard[0].totalQuizzes} quizzes
+                  {classLeaderboard.leaderboard[0].quizzesCompleted}/{classLeaderboard.leaderboard[0].totalQuizzes} bài kiểm tra
                 </p>
                 <div className="w-20 h-18 bg-amber-400 rounded-t-lg flex items-center justify-center text-xl font-bold mt-2">1</div>
               </div>
@@ -599,10 +599,10 @@ function ClassLeaderboardView({
                   {classLeaderboard.leaderboard[2].studentName}
                 </p>
                 <p className={`text-lg font-bold ${getScoreColor(classLeaderboard.leaderboard[2].totalScore)}`}>
-                  {classLeaderboard.leaderboard[2].totalScore} pts
+                  {classLeaderboard.leaderboard[2].totalScore} điểm
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {classLeaderboard.leaderboard[2].quizzesCompleted}/{classLeaderboard.leaderboard[2].totalQuizzes} quizzes
+                  {classLeaderboard.leaderboard[2].quizzesCompleted}/{classLeaderboard.leaderboard[2].totalQuizzes} bài kiểm tra
                 </p>
                 <div className="w-16 h-10 bg-amber-600 rounded-t-lg flex items-center justify-center text-lg font-bold text-white mt-2">3</div>
               </div>
@@ -612,9 +612,9 @@ function ClassLeaderboardView({
           {/* Rankings List */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">All Rankings</CardTitle>
+              <CardTitle className="text-lg">Bảng xếp hạng đầy đủ</CardTitle>
               <CardDescription>
-                {classLeaderboard.leaderboard.length} student{classLeaderboard.leaderboard.length !== 1 ? "s" : ""} with results
+                {classLeaderboard.leaderboard.length} học sinh có kết quả
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -633,14 +633,14 @@ function ClassLeaderboardView({
                         <div>
                           <p className="font-medium">{entry.studentName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {entry.quizzesCompleted}/{entry.totalQuizzes} quizzes completed
+                            {entry.quizzesCompleted}/{entry.totalQuizzes} bài kiểm tra đã hoàn thành
                           </p>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className={`text-xl font-bold ${getScoreColor(entry.totalScore)}`}>
-                        {entry.totalScore} pts
+                        {entry.totalScore} điểm
                       </p>
                     </div>
                   </div>

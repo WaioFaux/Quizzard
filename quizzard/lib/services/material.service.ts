@@ -14,11 +14,11 @@ const PDF_MAGIC_BYTES = Buffer.from("%PDF-", "ascii");
 
 function validatePdfMagicBytes(buffer: Buffer): void {
   if (buffer.length < PDF_MAGIC_BYTES.length) {
-    throw new ValidationError("File is too small to be a valid PDF");
+    throw new ValidationError("Tệp quá nhỏ để là tệp PDF hợp lệ");
   }
   const header = buffer.slice(0, PDF_MAGIC_BYTES.length);
   if (!header.equals(PDF_MAGIC_BYTES)) {
-    throw new ValidationError("File does not have a valid PDF signature");
+    throw new ValidationError("Tệp không có chữ ký PDF hợp lệ");
   }
 }
 
@@ -37,21 +37,21 @@ export async function createMaterialFromBlob(
   // Verify class ownership
   const cls = await prisma.class.findUnique({ where: { id: classId } });
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   if (!file.url || !file.url.startsWith("https://")) {
-    throw new ValidationError("A valid upload URL is required");
+    throw new ValidationError("Cần một URL tải lên hợp lệ");
   }
 
   // Enforce file size limit using the blob metadata (no download yet)
   const info = await getBlobInfo(file.url);
   if (info.size > MAX_MATERIAL_BYTES) {
     await deleteBlob(info.url);
-    throw new ValidationError("File exceeds maximum size of 50 MB");
+    throw new ValidationError("Tệp vượt quá kích thước tối đa 50 MB");
   }
 
   const buffer = await downloadBlob(info.url);
@@ -94,7 +94,7 @@ export async function processMaterial(materialId: string, url: string) {
 
     if (!truncatedText || truncatedText.trim().length === 0) {
       throw new Error(
-        "PDF extracted text is empty - the file may be scanned/image-based or corrupted"
+        "Nội dung trích xuất từ PDF rỗng - tệp có thể là bản scan/ảnh hoặc bị hỏng"
       );
     }
 
@@ -146,11 +146,11 @@ export async function getMaterial(materialId: string, teacherId: string) {
   });
 
   if (!material) {
-    throw new NotFoundError("Material");
+    throw new NotFoundError("Tài liệu");
   }
 
   if (material.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this material");
+    throw new AuthorizationError("Bạn không sở hữu tài liệu này");
   }
 
   return material;
@@ -167,11 +167,11 @@ export async function deleteMaterial(materialId: string, teacherId: string) {
   });
 
   if (!material) {
-    throw new NotFoundError("Material");
+    throw new NotFoundError("Tài liệu");
   }
 
   if (material.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this material");
+    throw new AuthorizationError("Bạn không sở hữu tài liệu này");
   }
 
   // Delete the file from the blob store
@@ -205,11 +205,11 @@ export async function reprocessMaterial(materialId: string, teacherId: string) {
   });
 
   if (!material) {
-    throw new NotFoundError("Material");
+    throw new NotFoundError("Tài liệu");
   }
 
   if (material.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this material");
+    throw new AuthorizationError("Bạn không sở hữu tài liệu này");
   }
 
   // Reset status and reprocess

@@ -2,6 +2,7 @@
  * Question Bank Generation Chat Prompts
  * Two-phase approach: Generate questions with user confirmation
  */
+import { VIETNAMESE_OUTPUT_RULE } from "./language";
 
 export type QuestionType = "MCQ" | "SHORT_ANSWER" | "CALCULATION";
 export type DifficultyLevel = "easy" | "medium" | "hard";
@@ -60,6 +61,8 @@ export interface GenerationResult {
  */
 export const QB_CHAT_SYSTEM_PROMPT = `You are an AI assistant for generating quiz questions.
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Guidelines:
 - Help users configure question generation settings
 - Explain what each option means
@@ -96,6 +99,8 @@ export function getInitialConfigPrompt(
 
   return `You are helping configure question generation for: "${topic}"${existingList}${materialSection}
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Please greet the user and ask about their question generation preferences:
 1. How many questions they want
 2. What question types (MCQ, Short Answer, Calculation)
@@ -105,7 +110,7 @@ Please greet the user and ask about their question generation preferences:
 Return your response as JSON:
 \`\`\`json
 {
-  "message": "Your greeting and initial questions to the user",
+  "message": "Lời chào và các câu hỏi ban đầu cho người dùng",
   "suggestions": {
     "count": 10,
     "questionTypes": ["MCQ", "SHORT_ANSWER"],
@@ -136,34 +141,36 @@ Count: ${config.count}
 Question Types: ${typeList}
 Difficulty: ${config.difficulty}${config.customInstructions ? `\nCustom Instructions: ${config.customInstructions}` : ""}${materialSection}
 
+${VIETNAMESE_OUTPUT_RULE}
+
 ## Output Format:
 Return a JSON object with your questions:
 \`\`\`json
 {
-  "message": "Confirmation message summarizing what was generated",
+  "message": "Thông báo xác nhận tóm tắt những gì đã được tạo",
   "questions": [
     {
       "type": "MCQ",
-      "prompt": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "prompt": "Nội dung câu hỏi",
+      "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
       "correctOptionIndex": 0,
-      "explanation": "Why this is correct"
+      "explanation": "Giải thích vì sao đáp án này đúng"
     },
     {
       "type": "SHORT_ANSWER",
-      "prompt": "Question text here",
-      "correctAnswer": "The correct answer",
-      "explanation": "Optional explanation"
+      "prompt": "Nội dung câu hỏi",
+      "correctAnswer": "Đáp án đúng",
+      "explanation": "Giải thích (không bắt buộc)"
     },
     {
       "type": "CALCULATION",
-      "promptTemplate": "A store sells {num_items} items at {price_per_item} dollars each. What is the total cost?",
+      "promptTemplate": "Một cửa hàng bán {num_items} món với giá {price_per_item} đồng mỗi món. Tổng chi phí là bao nhiêu?",
       "variables": [
         {"name": "num_items", "min": 1, "max": 10, "decimals": 0},
         {"name": "price_per_item", "min": 10, "max": 100, "decimals": 2}
       ],
       "answerFormula": "num_items * price_per_item",
-      "explanation": "Multiply number of items by price per item"
+      "explanation": "Nhân số lượng món với giá của mỗi món"
     }
   ]
 }
@@ -207,10 +214,10 @@ export function getTypeDifficultyPrompt(
 
   const mcqOutput = `    {
       "type": "${questionType}",
-      "prompt": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "prompt": "Nội dung câu hỏi",
+      "options": ["Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D"],
       "correctOptionIndex": 0,
-      "explanation": "Why this answer is correct"
+      "explanation": "Giải thích vì sao đáp án này đúng"
     }`;
 
   const shortAnswerOutput = `    {
@@ -222,13 +229,13 @@ export function getTypeDifficultyPrompt(
 
   const calcOutput = `    {
       "type": "${questionType}",
-      "promptTemplate": "A store sells {num_items} items at {price_per_item} dollars each. What is the total cost?",
+      "promptTemplate": "Một cửa hàng bán {num_items} món với giá {price_per_item} đồng mỗi món. Tổng chi phí là bao nhiêu?",
       "variables": [
         {"name": "num_items", "min": 1, "max": 10, "decimals": 0},
         {"name": "price_per_item", "min": 10, "max": 100, "decimals": 2}
       ],
       "answerFormula": "num_items * price_per_item",
-      "explanation": "Step-by-step explanation"
+      "explanation": "Giải thích từng bước"
     }`;
 
   const questionsBlock =
@@ -246,6 +253,8 @@ export function getTypeDifficultyPrompt(
       : "Variables must be numeric. The formula must use the exact variable names defined.";
 
   return `Generate ${count} ${difficulty} ${questionType} question(s) for the topic: "${topic}"${customInstructions ? `\nCustom instructions: ${customInstructions}` : ""}${materialSection}
+
+${VIETNAMESE_OUTPUT_RULE}
 
 ## Question Type: ${questionType}
 ${typeDesc[questionType]}
@@ -288,6 +297,8 @@ ${planJson}
 
 User's request: "${userMessage}"
 
+${VIETNAMESE_OUTPUT_RULE}
+
 Analyze the user's request and either:
 1. Update the plan based on their feedback
 2. Confirm you're ready to generate with the new settings
@@ -295,7 +306,7 @@ Analyze the user's request and either:
 Return as JSON:
 \`\`\`json
 {
-  "message": "Your response to the user",
+  "message": "Câu trả lời của bạn cho người dùng",
   "updatedPlan": { updated plan or null if no change },
   "readyToGenerate": true/false
 }

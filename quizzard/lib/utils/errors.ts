@@ -10,15 +10,15 @@ export class AppError extends Error {
 }
 
 export class AuthorizationError extends AppError {
-  constructor(message = "Unauthorized") {
+  constructor(message = "Không có quyền truy cập") {
     super(message, "UNAUTHORIZED", 403);
     this.name = "AuthorizationError";
   }
 }
 
 export class NotFoundError extends AppError {
-  constructor(resource = "Resource") {
-    super(`${resource} not found`, "NOT_FOUND", 404);
+  constructor(resource = "Tài nguyên") {
+    super(`Không tìm thấy ${resource}`, "NOT_FOUND", 404);
     this.name = "NotFoundError";
   }
 }
@@ -39,7 +39,7 @@ export class ConflictError extends AppError {
 
 export class DeadlinePassedError extends AppError {
   constructor() {
-    super("Quiz deadline has passed", "DEADLINE_PASSED", 400);
+    super("Đã quá hạn chót của bài kiểm tra", "DEADLINE_PASSED", 400);
     this.name = "DeadlinePassedError";
   }
 }
@@ -47,7 +47,7 @@ export class DeadlinePassedError extends AppError {
 export class AttemptInProgressError extends AppError {
   constructor() {
     super(
-      "You already have an attempt in progress for this quiz",
+      "Bạn đang có một lượt làm bài chưa hoàn thành cho bài kiểm tra này",
       "ATTEMPT_EXISTS",
       409
     );
@@ -57,14 +57,14 @@ export class AttemptInProgressError extends AppError {
 
 export class QuizNotPublishedError extends AppError {
   constructor() {
-    super("Quiz is not published yet", "QUIZ_NOT_PUBLISHED", 400);
+    super("Bài kiểm tra chưa được xuất bản", "QUIZ_NOT_PUBLISHED", 400);
     this.name = "QuizNotPublishedError";
   }
 }
 
 export class AIProviderError extends AppError {
   constructor(
-    message = "The AI service is temporarily unavailable. Please try again in a moment."
+    message = "Dịch vụ AI tạm thời không khả dụng. Vui lòng thử lại sau giây lát."
   ) {
     super(message, "AI_UNAVAILABLE", 503);
     this.name = "AIProviderError";
@@ -79,7 +79,7 @@ export class AIProviderError extends AppError {
  */
 export class AIResponseError extends AppError {
   constructor(
-    message = "The AI returned a response that could not be read. Please try again."
+    message = "AI trả về phản hồi không đọc được. Vui lòng thử lại."
   ) {
     super(message, "AI_INVALID_RESPONSE", 502);
     this.name = "AIResponseError";
@@ -89,7 +89,7 @@ export class AIResponseError extends AppError {
 export class IllegalTransitionError extends AppError {
   constructor(entity: string, from: string, to: string) {
     super(
-      `Illegal ${entity} transition from ${from} to ${to}`,
+      `Chuyển trạng thái ${entity} không hợp lệ từ ${from} sang ${to}`,
       "ILLEGAL_TRANSITION",
       400
     );
@@ -99,7 +99,7 @@ export class IllegalTransitionError extends AppError {
 
 export class DeadlineShortenError extends AppError {
   constructor() {
-    super("Cannot shorten deadline", "DEADLINE_SHORTEN_FORBIDDEN", 400);
+    super("Không thể rút ngắn hạn chót", "DEADLINE_SHORTEN_FORBIDDEN", 400);
     this.name = "DeadlineShortenError";
   }
 }
@@ -107,7 +107,7 @@ export class DeadlineShortenError extends AppError {
 export class QuizAlreadyPublishedError extends AppError {
   constructor() {
     super(
-      "Cannot modify question bank of a published quiz",
+      "Không thể chỉnh sửa ngân hàng câu hỏi của bài kiểm tra đã xuất bản",
       "QUIZ_ALREADY_PUBLISHED",
       400
     );

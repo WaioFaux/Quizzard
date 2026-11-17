@@ -35,19 +35,20 @@ export default function JoinClassPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to join class");
+        throw new Error(data.error || "Không thể tham gia lớp");
       }
 
       toast({
-        title: "Success",
-        description: "You've joined the class!",
+        title: "Thành công",
+        description: "Bạn đã tham gia lớp!",
       });
 
       router.push(`/student/classes/${data.data.class.id}`);
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join class",
+        title: "Lỗi",
+        description:
+          error instanceof Error ? error.message : "Không thể tham gia lớp",
         variant: "destructive",
       });
     } finally {
@@ -77,25 +78,25 @@ export default function JoinClassPage() {
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          My Classes
+          Lớp của tôi
         </Button>
       </div>
 
       <div className="max-w-md mx-auto">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Join a Class</CardTitle>
+            <CardTitle className="text-2xl">Tham gia lớp</CardTitle>
             <CardDescription>
-              Enter the class code and password provided by your teacher
+              Nhập mã lớp và mật khẩu do giáo viên cung cấp
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleJoin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="classCode">Class Code</Label>
+                <Label htmlFor="classCode">Mã lớp</Label>
                 <Input
                   id="classCode"
-                  placeholder="e.g., ABC123"
+                  placeholder="ví dụ: ABC123"
                   value={formData.classCode}
                   onChange={(e) =>
                     setFormData({ ...formData, classCode: e.target.value.toUpperCase() })
@@ -105,16 +106,16 @@ export default function JoinClassPage() {
                   maxLength={10}
                 />
                 <p className="text-xs text-muted-foreground text-center">
-                  The class code is usually 6 characters
+                  Mã lớp thường gồm 6 ký tự
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="classPassword">Class Password</Label>
+                <Label htmlFor="classPassword">Mật khẩu lớp</Label>
                 <Input
                   id="classPassword"
                   type="password"
-                  placeholder="Enter the class password"
+                  placeholder="Nhập mật khẩu của lớp"
                   value={formData.classPassword}
                   onChange={(e) =>
                     setFormData({ ...formData, classPassword: e.target.value })
@@ -124,13 +125,13 @@ export default function JoinClassPage() {
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Joining..." : "Join Class"}
+                {isSubmitting ? "Đang tham gia..." : "Tham gia lớp"}
               </Button>
             </form>
 
             <div className="mt-6 pt-6 border-t">
               <p className="text-sm text-muted-foreground text-center">
-                Don't have a class code? Contact your teacher to get the code and password.
+                Chưa có mã lớp? Hãy liên hệ giáo viên của bạn để được cấp mã và mật khẩu.
               </p>
             </div>
           </CardContent>

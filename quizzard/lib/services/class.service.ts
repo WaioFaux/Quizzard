@@ -114,18 +114,18 @@ export async function getClassById(classId: string, userId: string, userRole: Ro
   });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   // Authorization: teacher must own the class, student must be enrolled
   if (userRole === Role.TEACHER && cls.teacherId !== userId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   if (userRole === Role.STUDENT) {
     const isEnrolled = cls.enrollments.some((e) => e.student.id === userId);
     if (!isEnrolled) {
-      throw new AuthorizationError("You are not enrolled in this class");
+      throw new AuthorizationError("Bạn chưa tham gia lớp này");
     }
   }
 
@@ -191,11 +191,11 @@ export async function updateClass(
   const cls = await prisma.class.findUnique({ where: { id: classId } });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   // Re-hash the new password if it is being updated
@@ -219,11 +219,11 @@ export async function deleteClass(classId: string, teacherId: string) {
   const cls = await prisma.class.findUnique({ where: { id: classId } });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   await prisma.class.delete({ where: { id: classId } });
@@ -235,12 +235,12 @@ export async function joinClass(studentId: string, classCode: string, classPassw
   });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   const valid = await bcrypt.compare(classPassword, cls.classPasswordHash);
   if (!valid) {
-    throw new AuthorizationError("Invalid class password");
+    throw new AuthorizationError("Mật khẩu lớp không đúng");
   }
 
   // Check if already enrolled
@@ -254,7 +254,7 @@ export async function joinClass(studentId: string, classCode: string, classPassw
   });
 
   if (existing) {
-    throw new ConflictError("Already enrolled in this class");
+    throw new ConflictError("Bạn đã tham gia lớp này");
   }
 
   const enrollment = await prisma.enrollment.create({
@@ -281,11 +281,11 @@ export async function listClassStudents(classId: string, teacherId: string) {
   const cls = await prisma.class.findUnique({ where: { id: classId } });
 
   if (!cls) {
-    throw new NotFoundError("Class");
+    throw new NotFoundError("Lớp");
   }
 
   if (cls.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this class");
+    throw new AuthorizationError("Bạn không sở hữu lớp này");
   }
 
   return prisma.enrollment.findMany({

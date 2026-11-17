@@ -492,27 +492,27 @@ function generateMockQuestions(count: number, preferredTypes?: QuestionType[]): 
       case "MCQ":
         question = {
           type: "MCQ",
-          prompt: "What is the primary purpose of indexes in a database?",
+          prompt: "Mục đích chính của chỉ mục (index) trong cơ sở dữ liệu là gì?",
           options: [
-            "To speed up data retrieval operations",
-            "To increase storage space",
-            "To enforce data integrity",
-            "To compress data files",
+            "Tăng tốc độ truy vấn và truy xuất dữ liệu",
+            "Tăng dung lượng lưu trữ",
+            "Bảo đảm tính toàn vẹn dữ liệu",
+            "Nén các tệp dữ liệu",
           ],
           correctOptionIndex: 0,
           explanation:
-            "Indexes create data structures that improve the speed of data retrieval operations on a database table.",
+            "Chỉ mục tạo ra các cấu trúc dữ liệu giúp tăng tốc độ truy xuất dữ liệu trên bảng.",
         };
         break;
 
       case "SHORT_ANSWER":
         question = {
           type: "SHORT_ANSWER",
-          prompt: "Define what a primary key is in a relational database.",
+          prompt: "Hãy định nghĩa khóa chính trong cơ sở dữ liệu quan hệ là gì.",
           correctAnswer:
-            "A primary key is a column or set of columns that uniquely identifies each row in a table.",
+            "Khóa chính là một cột hoặc tập hợp cột xác định duy nhất từng hàng trong bảng.",
           explanation:
-            "A primary key must contain unique values and cannot contain NULL values.",
+            "Khóa chính phải chứa các giá trị duy nhất và không được chứa giá trị NULL.",
         };
         break;
 
@@ -520,7 +520,7 @@ function generateMockQuestions(count: number, preferredTypes?: QuestionType[]): 
         question = {
           type: "CALCULATION",
           promptTemplate:
-            "A database table has {num_records} records and {num_indexes} indexes. Each index adds {overhead_percent}% storage overhead per record. Calculate the total storage overhead in MB if each record is {record_size} bytes.",
+            "Một bảng cơ sở dữ liệu có {num_records} bản ghi và {num_indexes} chỉ mục. Mỗi chỉ mục làm tăng dung lượng lưu trữ thêm {overhead_percent}% cho mỗi bản ghi. Hãy tính tổng dung lượng lưu trữ bị tăng thêm (MB) nếu mỗi bản ghi dài {record_size} byte.",
           variables: [
             { name: "num_records", min: 1000, max: 100000, decimals: 0 },
             { name: "num_indexes", min: 1, max: 10, decimals: 0 },
@@ -530,7 +530,7 @@ function generateMockQuestions(count: number, preferredTypes?: QuestionType[]): 
           answerFormula:
             "(num_records * record_size * num_indexes * overhead_percent / 100) / (1024 * 1024)",
           explanation:
-            "Storage overhead = (number of records × record size × number of indexes × overhead %) / 100",
+            "Dung lượng tăng thêm = (số bản ghi × kích thước bản ghi × số chỉ mục × phần trăm tăng thêm) / 100",
         };
 
         const substitutedPrompt = substituteVariables(
@@ -546,8 +546,8 @@ function generateMockQuestions(count: number, preferredTypes?: QuestionType[]): 
       default:
         question = {
           type: "SHORT_ANSWER",
-          prompt: "What is the default mock question?",
-          correctAnswer: "Mock answer",
+          prompt: "Đây là câu hỏi mô phỏng mặc định?",
+          correctAnswer: "Câu trả lời mô phỏng",
         };
     }
 
@@ -602,7 +602,7 @@ export async function blindRecheck(
     if (Math.random() < 0.05) {
       return {
         flagged: true,
-        reason: "Possible ambiguity detected in question phrasing.",
+        reason: "Có thể câu hỏi bị mơ hồ hoặc thiếu rõ ràng.",
       };
     }
     console.log(`${LOG_PREFIX} [RECHECK_COMPLETE] Fallback passed (no flag)`, {
@@ -708,9 +708,9 @@ export async function proposeLectures(
 
 function generateMockLectures(): Array<{ title: string; startPage: number; endPage: number }> {
   return [
-    { title: "Introduction to Database Concepts", startPage: 1, endPage: 10 },
-    { title: "Relational Data Modeling", startPage: 11, endPage: 25 },
-    { title: "SQL Fundamentals", startPage: 26, endPage: 45 },
+    { title: "Giới thiệu về khái niệm cơ sở dữ liệu", startPage: 1, endPage: 10 },
+    { title: "Mô hình hóa dữ liệu quan hệ", startPage: 11, endPage: 25 },
+    { title: "Cơ bản về SQL", startPage: 26, endPage: 45 },
   ];
 }
 

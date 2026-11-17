@@ -82,16 +82,16 @@ export default function StudentProgressPage() {
   }
 
   function formatDeadline(deadline: string | null) {
-    if (!deadline) return "No deadline";
+    if (!deadline) return "Không hạn chót";
     const date = new Date(deadline);
     const now = new Date();
     const diff = date.getTime() - now.getTime();
-    if (diff < 0) return "Deadline passed";
+    if (diff < 0) return "Đã quá hạn";
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    if (days === 0) return "Due today";
-    if (days === 1) return "Due tomorrow";
-    if (days < 7) return `Due in ${days} days`;
-    return `Due ${date.toLocaleDateString("vi-VN", { day: "numeric", month: "short" })}`;
+    if (days === 0) return "Hạn chót hôm nay";
+    if (days === 1) return "Hạn chót ngày mai";
+    if (days < 7) return `Hạn chót sau ${days} ngày`;
+    return `Hạn chót ${date.toLocaleDateString("vi-VN", { day: "numeric", month: "short" })}`;
   }
 
   // Available quizzes = published quizzes in enrolled classes the student hasn't attempted
@@ -151,21 +151,21 @@ export default function StudentProgressPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-1">My Progress</h1>
-      <p className="text-muted-foreground mb-6">Track your learning across all classes</p>
+      <h1 className="text-2xl font-bold mb-1">Tiến độ của tôi</h1>
+      <p className="text-muted-foreground mb-6">Theo dõi tiến độ học tập của bạn trên tất cả các lớp</p>
 
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats?.classesEnrolled ?? 0}</div>
-            <p className="text-sm text-muted-foreground">Classes enrolled</p>
+            <p className="text-sm text-muted-foreground">Số lớp đã tham gia</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold">{stats?.quizzesCompleted ?? 0}</div>
-            <p className="text-sm text-muted-foreground">Quizzes completed</p>
+            <p className="text-sm text-muted-foreground">Số bài kiểm tra đã hoàn thành</p>
           </CardContent>
         </Card>
         <Card>
@@ -173,7 +173,7 @@ export default function StudentProgressPage() {
             <div className={`text-2xl font-bold ${stats?.overallAverage != null ? getScoreColor(stats.overallAverage) : ""}`}>
               {stats?.overallAverage != null ? `${Math.round(stats.overallAverage)}%` : "—"}
             </div>
-            <p className="text-sm text-muted-foreground">Overall average score</p>
+            <p className="text-sm text-muted-foreground">Điểm trung bình tổng thể</p>
           </CardContent>
         </Card>
       </div>
@@ -182,10 +182,10 @@ export default function StudentProgressPage() {
       <Tabs defaultValue="completed" className="space-y-4">
         <TabsList>
           <TabsTrigger value="completed">
-            Completed ({attempts.filter((a) => a.status === "SUBMITTED").length})
+            Đã hoàn thành ({attempts.filter((a) => a.status === "SUBMITTED").length})
           </TabsTrigger>
           <TabsTrigger value="available">
-            Available ({availableQuizzes.length})
+            Đang mở ({availableQuizzes.length})
           </TabsTrigger>
         </TabsList>
 
@@ -205,7 +205,7 @@ export default function StudentProgressPage() {
                 <path d="M9 11l3 3L22 4" />
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
               </svg>
-              <p className="text-muted-foreground">No completed quizzes yet</p>
+              <p className="text-muted-foreground">Chưa có bài kiểm tra nào hoàn thành</p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -243,7 +243,7 @@ export default function StudentProgressPage() {
                             )
                           }
                         >
-                          View
+                          Xem
                         </Button>
                       </div>
                     </CardContent>
@@ -269,7 +269,7 @@ export default function StudentProgressPage() {
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              <p className="text-muted-foreground">No quizzes available</p>
+              <p className="text-muted-foreground">Không có bài kiểm tra nào đang mở</p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -297,7 +297,7 @@ export default function StudentProgressPage() {
                           size="sm"
                           onClick={() => router.push(`/student/classes/${q.classId}/quiz/${q.quizId}`)}
                         >
-                          Start Quiz
+                          Bắt đầu
                         </Button>
                       </div>
                     </CardContent>

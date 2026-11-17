@@ -52,8 +52,8 @@ export default function StudentClassesPage() {
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load classes",
+        title: "Lỗi",
+        description: "Không thể tải danh sách lớp",
         variant: "destructive",
       });
     } finally {
@@ -65,11 +65,11 @@ export default function StudentClassesPage() {
     if (!quiz) return null;
     if (quiz.status === "PUBLISHED") {
       if (quiz.deadline && new Date(quiz.deadline) < new Date()) {
-        return { label: "Missed", variant: "destructive" as const };
+        return { label: "Đã quá hạn", variant: "destructive" as const };
       }
-      return { label: "Available", variant: "default" as const };
+      return { label: "Đang mở", variant: "default" as const };
     }
-    return { label: "Coming Soon", variant: "secondary" as const };
+    return { label: "Sắp mở", variant: "secondary" as const };
   }
 
   if (isLoading) {
@@ -77,8 +77,8 @@ export default function StudentClassesPage() {
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">My Classes</h1>
-            <p className="text-muted-foreground">Classes you're enrolled in</p>
+            <h1 className="text-2xl font-bold">Lớp của tôi</h1>
+            <p className="text-muted-foreground">Các lớp bạn đang tham gia</p>
           </div>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -102,8 +102,8 @@ export default function StudentClassesPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">My Classes</h1>
-          <p className="text-muted-foreground">Classes you're enrolled in</p>
+          <h1 className="text-2xl font-bold">Lớp của tôi</h1>
+          <p className="text-muted-foreground">Các lớp bạn đang tham gia</p>
         </div>
         <Button onClick={() => router.push("/student/classes/join")}>
           <svg
@@ -120,7 +120,7 @@ export default function StudentClassesPage() {
           >
             <path d="M12 5v14M5 12h14" />
           </svg>
-          Join a Class
+          Tham gia lớp
         </Button>
       </div>
 
@@ -140,12 +140,12 @@ export default function StudentClassesPage() {
           >
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
           </svg>
-          <h3 className="text-lg font-semibold mb-2">No classes yet</h3>
+          <h3 className="text-lg font-semibold mb-2">Chưa có lớp nào</h3>
           <p className="text-muted-foreground mb-4 text-center max-w-sm">
-            Join a class using the class code provided by your teacher
+            Tham gia lớp bằng mã lớp do giáo viên cung cấp
           </p>
           <Button onClick={() => router.push("/student/classes/join")}>
-            Join a Class
+            Tham gia lớp
           </Button>
         </Card>
       ) : (
@@ -169,7 +169,7 @@ export default function StudentClassesPage() {
                       </CardDescription>
                     </div>
                     <Badge variant="secondary" className="text-xs">
-                      {cls._count.enrollments} students
+                      {cls._count.enrollments} học sinh
                     </Badge>
                   </div>
                 </CardHeader>
@@ -181,11 +181,11 @@ export default function StudentClassesPage() {
                   )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {cls.lectures.length} lectures
+                      {cls.lectures.length} bài giảng
                     </span>
                     {availableQuizzes.length > 0 && (
                       <Badge variant="default" className="text-xs">
-                        {availableQuizzes.length} quiz available
+                        {availableQuizzes.length} bài kiểm tra đang mở
                       </Badge>
                     )}
                   </div>

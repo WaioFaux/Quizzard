@@ -22,19 +22,19 @@ function parseRow(row: RawRow, rowIndex: number): {
 
   if (!VALID_TYPES.has(type)) {
     throw new ValidationError(
-      `Row ${rowIndex + 1}: invalid type "${type}". Must be one of: MCQ, SHORT_ANSWER, CALCULATION.`
+      `Dòng ${rowIndex + 1}: loại "${type}" không hợp lệ. Phải là một trong: MCQ, SHORT_ANSWER, CALCULATION.`
     );
   }
 
   if (!prompt) {
-    throw new ValidationError(`Row ${rowIndex + 1}: prompt/question field is required.`);
+    throw new ValidationError(`Dòng ${rowIndex + 1}: trường prompt/question là bắt buộc.`);
   }
 
   if (type === "MCQ") {
     let options: string[];
     const rawOptions = (row.options ?? row.Options ?? "").trim();
     if (!rawOptions) {
-      throw new ValidationError(`Row ${rowIndex + 1}: options field is required for MCQ.`);
+      throw new ValidationError(`Dòng ${rowIndex + 1}: trường options là bắt buộc với MCQ.`);
     }
     // Try JSON array first, then fall back to pipe-separated
     try {
@@ -47,7 +47,7 @@ function parseRow(row: RawRow, rowIndex: number): {
     const correctIndex = Number(row.correct_option_index ?? row.correctOptionIndex ?? correctAnswer);
     if (isNaN(correctIndex) || correctIndex < 0 || correctIndex >= options.length) {
       throw new ValidationError(
-        `Row ${rowIndex + 1}: correct_option_index is out of range for MCQ options.`
+        `Dòng ${rowIndex + 1}: correct_option_index nằm ngoài phạm vi các đáp án MCQ.`
       );
     }
 
@@ -90,7 +90,7 @@ function parseRow(row: RawRow, rowIndex: number): {
     }
   } catch {
     throw new ValidationError(
-      `Row ${rowIndex + 1}: variables must be a JSON array of {name, min, max, decimals?}.`
+      `Dòng ${rowIndex + 1}: variables phải là một mảng JSON gồm {name, min, max, decimals?}.`
     );
   }
 
@@ -154,19 +154,19 @@ export async function POST(
     const formData = await req.formData();
     const file = formData.get("file");
     if (!file || !(file instanceof Blob)) {
-      throw new ValidationError("A file is required.");
+      throw new ValidationError("Cần có một tệp.");
     }
 
     const ext = (file.name ?? "").toLowerCase().split(".").pop();
     if (ext && !["csv", "xlsx", "xls"].includes(ext)) {
-      throw new ValidationError("File must be a .csv, .xlsx, or .xls file.");
+      throw new ValidationError("Tệp phải có định dạng .csv, .xlsx hoặc .xls.");
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const rows = parseFile(buffer);
 
     if (rows.length === 0) {
-      throw new ValidationError("The file contains no data rows.");
+      throw new ValidationError("Tệp không có dòng dữ liệu nào.");
     }
 
     const questions: Array<{ type: "MCQ" | "SHORT_ANSWER" | "CALCULATION"; content: Record<string, unknown> }> = [];

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     if (!user) {
       logger.warn("auth.login_failed", { email: parsed.data.email });
-      throw new AuthorizationError("Invalid email or password");
+      throw new AuthorizationError("Email hoặc mật khẩu không đúng");
     }
 
     // Create session

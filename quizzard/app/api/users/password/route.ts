@@ -23,13 +23,13 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
-      throw new AuthorizationError("User not found");
+      throw new AuthorizationError("Không tìm thấy người dùng");
     }
 
     // Verify current password
     const isValid = await verifyPassword(parsed.data.currentPassword, user.passwordHash);
     if (!isValid) {
-      throw new AuthorizationError("Current password is incorrect");
+      throw new AuthorizationError("Mật khẩu hiện tại không đúng");
     }
 
     // Update to new password

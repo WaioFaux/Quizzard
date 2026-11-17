@@ -87,7 +87,7 @@ describe("Report Service (mocked)", () => {
           studentAnswerId: "answer-1",
           description: "This question seems incorrect.",
         })
-      ).rejects.toThrow("unsubmitted attempt");
+      ).rejects.toThrow("lượt làm bài chưa nộp");
     });
 
     it("should create a report successfully", async () => {

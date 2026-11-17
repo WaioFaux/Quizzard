@@ -50,8 +50,8 @@ export default function SignupPage() {
       if (!res.ok) {
         toast({
           variant: "destructive",
-          title: "Signup failed",
-          description: data.error || "Could not create account",
+          title: "Đăng ký thất bại",
+          description: data.error || "Không thể tạo tài khoản",
         });
         return;
       }
@@ -66,8 +66,8 @@ export default function SignupPage() {
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
+        title: "Lỗi",
+        description: "Đã xảy ra lỗi. Vui lòng thử lại.",
       });
     } finally {
       setIsLoading(false);
@@ -78,21 +78,21 @@ export default function SignupPage() {
     <Card className="w-full max-w-md">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-bold text-center">
-          Create an account
+          Tạo tài khoản
         </CardTitle>
         <CardDescription className="text-center">
-          Enter your details to get started
+          Nhập thông tin của bạn để bắt đầu
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">Họ và tên</Label>
             <Input
               id="name"
               name="name"
               type="text"
-              placeholder="Your full name"
+              placeholder="Họ và tên đầy đủ của bạn"
               required
               disabled={isLoading}
             />
@@ -103,47 +103,47 @@ export default function SignupPage() {
               id="email"
               name="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder="ban@example.com"
               required
               disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Mật khẩu</Label>
             <Input
               id="password"
               name="password"
               type="password"
-              placeholder="Create a password"
+              placeholder="Tạo mật khẩu của bạn"
               required
               minLength={6}
               disabled={isLoading}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="role">I am a...</Label>
+            <Label htmlFor="role">Tôi là...</Label>
             <Select name="role" required defaultValue="STUDENT">
               <SelectTrigger>
-                <SelectValue placeholder="Select your role" />
+                <SelectValue placeholder="Chọn vai trò của bạn" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="STUDENT">Student</SelectItem>
-                <SelectItem value="TEACHER">Teacher</SelectItem>
+                <SelectItem value="STUDENT">Học sinh</SelectItem>
+                <SelectItem value="TEACHER">Giáo viên</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
           <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Create account"}
+            {isLoading ? "Đang tạo tài khoản..." : "Tạo tài khoản"}
           </Button>
           <p className="text-sm text-center text-muted-foreground">
-            Already have an account?{" "}
+            Đã có tài khoản?{" "}
             <Link
               href="/login"
               className="text-primary font-medium hover:underline"
             >
-              Sign in
+              Đăng nhập
             </Link>
           </p>
         </CardFooter>

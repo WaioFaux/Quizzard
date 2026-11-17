@@ -74,8 +74,8 @@ export default function LecturesPage({
     } catch (error) {
       console.error("[LecturesPage] Error fetching lectures:", error);
       toast({
-        title: "Error",
-        description: "Failed to load lectures",
+        title: "Lỗi",
+        description: "Không thể tải danh sách buổi giảng",
         variant: "destructive",
       });
     } finally {
@@ -84,7 +84,7 @@ export default function LecturesPage({
   }
 
   async function handleDeleteLecture(lectureId: string) {
-    if (!confirm("Are you sure you want to delete this lecture? This will also delete any associated quiz and attempts.")) {
+    if (!confirm("Bạn có chắc muốn xóa buổi giảng này? Bài kiểm tra và các lượt làm bài liên quan cũng sẽ bị xóa.")) {
       return;
     }
 
@@ -95,19 +95,19 @@ export default function LecturesPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to delete lecture");
+        throw new Error(data.error || "Không thể xóa buổi giảng");
       }
 
       toast({
-        title: "Success",
-        description: "Lecture deleted successfully",
+        title: "Thành công",
+        description: "Xóa buổi giảng thành công",
       });
 
       fetchLectures();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete lecture",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xóa buổi giảng",
         variant: "destructive",
       });
     }
@@ -116,9 +116,9 @@ export default function LecturesPage({
   function getStatusBadge(status: string) {
     switch (status) {
       case "DRAFT":
-        return <Badge variant="secondary">Draft</Badge>;
+        return <Badge variant="secondary">Nháp</Badge>;
       case "PUBLISHED":
-        return <Badge variant="default">Published</Badge>;
+        return <Badge variant="default">Đã xuất bản</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -143,10 +143,10 @@ export default function LecturesPage({
             >
               <path d="M19 12H5M12 19l-7-7 7-7" />
             </svg>
-            Classes
+            Lớp
           </Button>
           <span className="text-muted-foreground">/</span>
-          <span className="text-muted-foreground">Lectures</span>
+          <span className="text-muted-foreground">Buổi giảng</span>
         </div>
 
         <div className="space-y-4">
@@ -177,16 +177,16 @@ export default function LecturesPage({
           >
             <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
-          Classes
+          Lớp
         </Button>
         <span className="text-muted-foreground">/</span>
-        <span className="text-muted-foreground">Lectures</span>
+        <span className="text-muted-foreground">Buổi giảng</span>
       </div>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Lectures</h1>
+        <h1 className="text-2xl font-bold">Buổi giảng</h1>
         <p className="text-muted-foreground mt-1">
-          Manage your course lectures and associated quizzes
+          Quản lý các buổi giảng và bài kiểm tra liên quan của môn học
         </p>
       </div>
 
@@ -210,12 +210,12 @@ export default function LecturesPage({
             <line x1="16" y1="17" x2="8" y2="17" />
             <polyline points="10 9 9 9 8 9" />
           </svg>
-          <h3 className="text-lg font-semibold mb-2">No lectures yet</h3>
+          <h3 className="text-lg font-semibold mb-2">Chưa có buổi giảng nào</h3>
           <p className="text-muted-foreground mb-4 text-center max-w-sm">
-            Create lectures from materials using the AI Chat feature, or manually add lectures from your class page.
+            Tạo buổi giảng từ tài liệu bằng tính năng Trò chuyện AI, hoặc thêm thủ công từ trang lớp của bạn.
           </p>
           <Button variant="outline" onClick={() => router.push(`/teacher/classes/${classId}`)}>
-            Go to Class Dashboard
+            Đến trang quản lý lớp
           </Button>
         </Card>
       ) : (
@@ -256,9 +256,9 @@ export default function LecturesPage({
                       {lecture.quiz && (
                         <>
                           <span>•</span>
-                          <span>{lecture.quiz._count.questionBank} questions</span>
+                          <span>{lecture.quiz._count.questionBank} câu hỏi</span>
                           <span>•</span>
-                          <span>{lecture.quiz._count.attempts} attempts</span>
+                          <span>{lecture.quiz._count.attempts} lượt làm bài</span>
                         </>
                       )}
                     </div>
@@ -271,7 +271,7 @@ export default function LecturesPage({
                       {getStatusBadge(lecture.quiz.status)}
                       <div className="text-right text-sm">
                         <p className="text-muted-foreground">
-                          {lecture.quiz.questionsPerAttempt} Q • {lecture.quiz.timeLimitMinutes} min
+                          {lecture.quiz.questionsPerAttempt} câu • {lecture.quiz.timeLimitMinutes} phút
                         </p>
                       </div>
                     </>
@@ -279,7 +279,7 @@ export default function LecturesPage({
                   {!lecture.quiz && (
                     <>
                       <Badge variant="outline" className="text-muted-foreground">
-                        No quiz
+                        Chưa có bài kiểm tra
                       </Badge>
                       <Button
                         variant="outline"
@@ -291,7 +291,7 @@ export default function LecturesPage({
                           );
                         }}
                       >
-                        Create Quiz
+                        Tạo bài kiểm tra
                       </Button>
                     </>
                   )}

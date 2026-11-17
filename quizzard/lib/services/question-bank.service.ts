@@ -15,11 +15,11 @@ export async function listQuestions(quizId: string, teacherId: string) {
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   const questions = await prisma.questionBankItem.findMany({
@@ -56,11 +56,11 @@ export async function createQuestion(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {
@@ -99,11 +99,11 @@ export async function getQuestion(
   });
 
   if (!question) {
-    throw new NotFoundError("Question");
+    throw new NotFoundError("Câu hỏi");
   }
 
   if (question.quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this question");
+    throw new AuthorizationError("Bạn không sở hữu câu hỏi này");
   }
 
   return question;
@@ -132,11 +132,11 @@ export async function updateQuestion(
   });
 
   if (!question) {
-    throw new NotFoundError("Question");
+    throw new NotFoundError("Câu hỏi");
   }
 
   if (question.quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this question");
+    throw new AuthorizationError("Bạn không sở hữu câu hỏi này");
   }
 
   if (question.quiz.status === QuizStatus.PUBLISHED) {
@@ -177,11 +177,11 @@ export async function updateQuestionStatus(
   });
 
   if (!question) {
-    throw new NotFoundError("Question");
+    throw new NotFoundError("Câu hỏi");
   }
 
   if (question.quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this question");
+    throw new AuthorizationError("Bạn không sở hữu câu hỏi này");
   }
 
   transitionQuestion(question.status, newStatus);
@@ -207,11 +207,11 @@ export async function deleteQuestion(questionId: string, teacherId: string) {
   });
 
   if (!question) {
-    throw new NotFoundError("Question");
+    throw new NotFoundError("Câu hỏi");
   }
 
   if (question.quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this question");
+    throw new AuthorizationError("Bạn không sở hữu câu hỏi này");
   }
 
   if (question.quiz.status === QuizStatus.PUBLISHED) {
@@ -240,11 +240,11 @@ export async function bulkCreateQuestions(
   });
 
   if (!quiz) {
-    throw new NotFoundError("Quiz");
+    throw new NotFoundError("Bài kiểm tra");
   }
 
   if (quiz.lecture.class.teacherId !== teacherId) {
-    throw new AuthorizationError("You do not own this quiz");
+    throw new AuthorizationError("Bạn không sở hữu bài kiểm tra này");
   }
 
   if (quiz.status === QuizStatus.PUBLISHED) {

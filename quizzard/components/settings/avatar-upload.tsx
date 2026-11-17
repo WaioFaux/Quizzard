@@ -54,7 +54,7 @@ export function AvatarUpload({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Upload failed");
+        throw new Error(data.message || "Tải lên thất bại");
       }
 
       onAvatarUpdate(data.data.avatarUrl);
@@ -89,7 +89,7 @@ export function AvatarUpload({
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Remove failed");
+        throw new Error(data.message || "Xóa thất bại");
       }
 
       onAvatarUpdate(null);
@@ -153,7 +153,7 @@ export function AvatarUpload({
         {currentAvatarUrl ? (
           <img
             src={currentAvatarUrl}
-            alt="Avatar"
+            alt="Ảnh đại diện"
             className="w-full h-full object-cover"
           />
         ) : (

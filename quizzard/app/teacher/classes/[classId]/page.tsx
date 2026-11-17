@@ -118,8 +118,8 @@ export default function TeacherClassDashboardPage({
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to load class",
+        title: "Lỗi",
+        description: "Không thể tải thông tin lớp",
         variant: "destructive",
       });
     } finally {
@@ -150,20 +150,20 @@ export default function TeacherClassDashboardPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to update class");
+        throw new Error(data.error || "Không thể cập nhật lớp");
       }
 
       toast({
-        title: "Success",
-        description: "Class updated successfully",
+        title: "Thành công",
+        description: "Cập nhật lớp thành công",
       });
 
       setIsEditDialogOpen(false);
       fetchClass();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update class",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể cập nhật lớp",
         variant: "destructive",
       });
     } finally {
@@ -181,8 +181,8 @@ export default function TeacherClassDashboardPage({
 
     if (!file) {
       toast({
-        title: "Error",
-        description: "Please select a file",
+        title: "Lỗi",
+        description: "Vui lòng chọn một tệp",
         variant: "destructive",
       });
       setIsUploading(false);
@@ -212,12 +212,12 @@ export default function TeacherClassDashboardPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to upload material");
+        throw new Error(data.error || "Không thể tải lên tài liệu");
       }
 
       toast({
-        title: "Success",
-        description: "File uploaded successfully",
+        title: "Thành công",
+        description: "Tải lên tệp thành công",
       });
 
       setIsUploadDialogOpen(false);
@@ -225,8 +225,8 @@ export default function TeacherClassDashboardPage({
       fetchClass();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload file",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tải lên tệp",
         variant: "destructive",
       });
     } finally {
@@ -250,12 +250,12 @@ export default function TeacherClassDashboardPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to create lecture");
+        throw new Error(data.error || "Không thể tạo buổi giảng");
       }
 
       toast({
-        title: "Success",
-        description: "Lecture created successfully",
+        title: "Thành công",
+        description: "Tạo buổi giảng thành công",
       });
 
       setIsLectureDialogOpen(false);
@@ -263,8 +263,8 @@ export default function TeacherClassDashboardPage({
       fetchClass();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create lecture",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể tạo buổi giảng",
         variant: "destructive",
       });
     } finally {
@@ -273,7 +273,7 @@ export default function TeacherClassDashboardPage({
   }
 
   async function handleDeleteMaterial(materialId: string) {
-    if (!confirm("Are you sure you want to delete this material? This action cannot be undone.")) {
+    if (!confirm("Bạn có chắc muốn xóa tài liệu này? Hành động này không thể hoàn tác.")) {
       return;
     }
 
@@ -284,26 +284,26 @@ export default function TeacherClassDashboardPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to delete material");
+        throw new Error(data.error || "Không thể xóa tài liệu");
       }
 
       toast({
-        title: "Success",
-        description: "Material deleted successfully",
+        title: "Thành công",
+        description: "Xóa tài liệu thành công",
       });
 
       fetchClass();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete material",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xóa tài liệu",
         variant: "destructive",
       });
     }
   }
 
   async function handleDeleteLecture(lectureId: string) {
-    if (!confirm("Are you sure you want to delete this lecture? This will also delete any associated quiz. This action cannot be undone.")) {
+    if (!confirm("Bạn có chắc muốn xóa buổi giảng này? Bài kiểm tra liên quan cũng sẽ bị xóa. Hành động này không thể hoàn tác.")) {
       return;
     }
 
@@ -314,19 +314,19 @@ export default function TeacherClassDashboardPage({
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to delete lecture");
+        throw new Error(data.error || "Không thể xóa buổi giảng");
       }
 
       toast({
-        title: "Success",
-        description: "Lecture deleted successfully",
+        title: "Thành công",
+        description: "Xóa buổi giảng thành công",
       });
 
       fetchClass();
     } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete lecture",
+        title: "Lỗi",
+        description: error instanceof Error ? error.message : "Không thể xóa buổi giảng",
         variant: "destructive",
       });
     }
@@ -365,9 +365,9 @@ export default function TeacherClassDashboardPage({
     return (
       <div className="p-6">
         <Card className="flex flex-col items-center justify-center py-12">
-          <h3 className="text-lg font-semibold mb-2">Class not found</h3>
+          <h3 className="text-lg font-semibold mb-2">Không tìm thấy lớp</h3>
           <Button variant="outline" onClick={() => router.push("/teacher/classes")}>
-            Back to Classes
+            Quay lại danh sách lớp
           </Button>
         </Card>
       </div>
@@ -394,7 +394,7 @@ export default function TeacherClassDashboardPage({
               >
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
-              Classes
+              Lớp
             </Button>
           </div>
           <h1 className="text-2xl font-bold">{cls.name}</h1>
@@ -403,11 +403,11 @@ export default function TeacherClassDashboardPage({
           )}
           <div className="flex items-center gap-3 mt-2">
             <span className="text-sm text-muted-foreground">
-              Code: <span className="font-mono font-semibold">{cls.classCode}</span>
+              Mã lớp: <span className="font-mono font-semibold">{cls.classCode}</span>
             </span>
             <Separator orientation="vertical" className="h-4" />
             <span className="text-sm text-muted-foreground">
-              {cls._count.enrollments} students enrolled
+              {cls._count.enrollments} học sinh đã tham gia
             </span>
           </div>
         </div>
@@ -429,18 +429,18 @@ export default function TeacherClassDashboardPage({
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
-              Edit Class
+              Sửa lớp
             </Button>
           </DialogTrigger>
           <DialogContent>
             <form onSubmit={handleUpdateClass}>
               <DialogHeader>
-                <DialogTitle>Edit Class</DialogTitle>
-                <DialogDescription>Update class information</DialogDescription>
+                <DialogTitle>Sửa lớp</DialogTitle>
+                <DialogDescription>Cập nhật thông tin lớp</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-name">Class Name</Label>
+                  <Label htmlFor="edit-name">Tên lớp</Label>
                   <Input
                     id="edit-name"
                     value={editForm.name}
@@ -451,7 +451,7 @@ export default function TeacherClassDashboardPage({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-description">Description</Label>
+                  <Label htmlFor="edit-description">Mô tả</Label>
                   <Input
                     id="edit-description"
                     value={editForm.description}
@@ -461,7 +461,7 @@ export default function TeacherClassDashboardPage({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-password">New Password (leave blank to keep current)</Label>
+                  <Label htmlFor="edit-password">Mật khẩu mới (để trống nếu giữ nguyên)</Label>
                   <Input
                     id="edit-password"
                     type="password"
@@ -475,10 +475,10 @@ export default function TeacherClassDashboardPage({
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>
-                  Cancel
+                  Hủy
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Save Changes"}
+                  {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
                 </Button>
               </DialogFooter>
             </form>
@@ -488,10 +488,10 @@ export default function TeacherClassDashboardPage({
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="materials">Materials</TabsTrigger>
-          <TabsTrigger value="lectures">Lectures</TabsTrigger>
-          <TabsTrigger value="students">Students</TabsTrigger>
+          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
+          <TabsTrigger value="materials">Tài liệu</TabsTrigger>
+          <TabsTrigger value="lectures">Buổi giảng</TabsTrigger>
+          <TabsTrigger value="students">Học sinh</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -499,7 +499,7 @@ export default function TeacherClassDashboardPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Students
+                  Tổng số học sinh
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -509,7 +509,7 @@ export default function TeacherClassDashboardPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Lectures
+                  Buổi giảng
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -519,7 +519,7 @@ export default function TeacherClassDashboardPage({
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Materials
+                  Tài liệu
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -531,7 +531,7 @@ export default function TeacherClassDashboardPage({
 
         <TabsContent value="materials" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Course Materials</h2>
+            <h2 className="text-lg font-semibold">Tài liệu môn học</h2>
             <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
@@ -551,20 +551,20 @@ export default function TeacherClassDashboardPage({
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  Upload PDF
+                  Tải lên PDF
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <form onSubmit={handleFileUpload}>
                   <DialogHeader>
-                    <DialogTitle>Upload Material</DialogTitle>
+                    <DialogTitle>Tải lên tài liệu</DialogTitle>
                     <DialogDescription>
-                      Upload a PDF file to create lectures from
+                      Tải lên tệp PDF để tạo các buổi giảng
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="file">PDF File</Label>
+                      <Label htmlFor="file">Tệp PDF</Label>
                       <Input
                         id="file"
                         name="file"
@@ -576,10 +576,10 @@ export default function TeacherClassDashboardPage({
                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
-                      Cancel
+                      Hủy
                     </Button>
                     <Button type="submit" disabled={isUploading}>
-                      {isUploading ? "Uploading..." : "Upload"}
+                      {isUploading ? "Đang tải lên..." : "Tải lên"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -589,9 +589,9 @@ export default function TeacherClassDashboardPage({
 
           {cls.materials.length === 0 ? (
             <Card className="flex flex-col items-center justify-center py-8">
-              <p className="text-muted-foreground mb-4">No materials uploaded yet</p>
+              <p className="text-muted-foreground mb-4">Chưa tải lên tài liệu nào</p>
               <Button variant="outline" onClick={() => setIsUploadDialogOpen(true)}>
-                Upload your first material
+                Hãy tải lên tài liệu đầu tiên của bạn
               </Button>
             </Card>
           ) : (
@@ -649,7 +649,7 @@ export default function TeacherClassDashboardPage({
                             <path d="M15 13v2" />
                             <path d="M9 13v2" />
                           </svg>
-                          AI Chat
+                          Trò chuyện AI
                         </Button>
                       )}
                       <Button
@@ -683,7 +683,7 @@ export default function TeacherClassDashboardPage({
 
         <TabsContent value="lectures" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Lectures</h2>
+            <h2 className="text-lg font-semibold">Buổi giảng</h2>
             <Dialog open={isLectureDialogOpen} onOpenChange={setIsLectureDialogOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
@@ -701,23 +701,23 @@ export default function TeacherClassDashboardPage({
                   >
                     <path d="M12 5v14M5 12h14" />
                   </svg>
-                  Add Lecture
+                  Thêm buổi giảng
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <form onSubmit={handleCreateLecture}>
                   <DialogHeader>
-                    <DialogTitle>Add Lecture</DialogTitle>
+                    <DialogTitle>Thêm buổi giảng</DialogTitle>
                     <DialogDescription>
-                      Create a new lecture for this class
+                      Tạo buổi giảng mới cho lớp này
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="lecture-title">Lecture Title</Label>
+                      <Label htmlFor="lecture-title">Tiêu đề buổi giảng</Label>
                       <Input
                         id="lecture-title"
-                        placeholder="VD: Session 1 - Introduction"
+                        placeholder="VD: Buổi 1 - Giới thiệu"
                         value={lectureForm.title}
                         onChange={(e) =>
                           setLectureForm({ title: e.target.value })
@@ -728,10 +728,10 @@ export default function TeacherClassDashboardPage({
                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setIsLectureDialogOpen(false)}>
-                      Cancel
+                      Hủy
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Creating..." : "Create"}
+                      {isSubmitting ? "Đang tạo..." : "Tạo"}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -741,9 +741,9 @@ export default function TeacherClassDashboardPage({
 
           {cls.lectures.length === 0 ? (
             <Card className="flex flex-col items-center justify-center py-8">
-              <p className="text-muted-foreground mb-4">No lectures yet</p>
+              <p className="text-muted-foreground mb-4">Chưa có buổi giảng nào</p>
               <Button variant="outline" onClick={() => setIsLectureDialogOpen(true)}>
-                Create your first lecture
+                Hãy tạo buổi giảng đầu tiên của bạn
               </Button>
             </Card>
           ) : (
@@ -767,11 +767,11 @@ export default function TeacherClassDashboardPage({
                         <p className="font-medium">{lecture.title}</p>
                         {lecture.quiz ? (
                           <p className="text-sm text-muted-foreground">
-                            {lecture.quiz.questionsPerAttempt} questions • {lecture.quiz.timeLimitMinutes} min
+                            {lecture.quiz.questionsPerAttempt} câu hỏi • {lecture.quiz.timeLimitMinutes} phút
                           </p>
                         ) : (
                           <p className="text-sm text-muted-foreground">
-                            No quiz yet — click to create one
+                            Chưa có bài kiểm tra — nhấn để tạo
                           </p>
                         )}
                       </div>
@@ -789,7 +789,7 @@ export default function TeacherClassDashboardPage({
                             );
                           }}
                         >
-                          Create Quiz
+                          Tạo bài kiểm tra
                         </Button>
                       )}
                       <Button
@@ -840,17 +840,17 @@ export default function TeacherClassDashboardPage({
 
         <TabsContent value="students" className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold">Enrolled Students</h2>
+            <h2 className="text-lg font-semibold">Học sinh đã tham gia</h2>
             <div className="text-sm text-muted-foreground">
-              {cls._count.enrollments} students
+              {cls._count.enrollments} học sinh
             </div>
           </div>
 
           {cls.enrollments.length === 0 ? (
             <Card className="flex flex-col items-center justify-center py-8">
-              <p className="text-muted-foreground">No students enrolled yet</p>
+              <p className="text-muted-foreground">Chưa có học sinh nào tham gia</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Share the class code <span className="font-mono font-semibold">{cls.classCode}</span> with your students
+                Chia sẻ mã lớp <span className="font-mono font-semibold">{cls.classCode}</span> với học sinh của bạn
               </p>
             </Card>
           ) : (
