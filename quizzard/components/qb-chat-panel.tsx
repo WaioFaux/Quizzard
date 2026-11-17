@@ -48,6 +48,26 @@ const TYPE_META: Record<QuestionType, { label: string; description: string }> = 
 
 const DIFFICULTIES: DifficultyLevel[] = ["easy", "medium", "hard"];
 
+/**
+ * How many questions one AI call asks for.
+ *
+ * The model writes the whole JSON payload in one answer and the time that
+ * takes grows with the number of questions. Measured on the paid tier, a
+ * call for 2-3 questions answered in 8-23s, while a call that needed more
+ * than 37s produced nothing at all. Every call therefore asks for at most
+ * MAX_QUESTIONS_PER_CALL questions, and the plan is split into that many
+ * calls.
+ */
+const MAX_QUESTIONS_PER_CALL = 2;
+
+/**
+ * How many times a single small call is attempted before the bucket is
+ * given up on. A model call can fail for a transient reason (the provider
+ * was slow, the provider was briefly overloaded), so one more attempt
+ * recovers from that without hammering the provider.
+ */
+const MAX_ATTEMPTS_PER_CALL = 3;
+
 function getDefaultTypeConfig(): TypeConfig {
   return {
     enabled: false,
@@ -85,6 +105,39 @@ function getTotalCount(plan: GenerationPlan): number {
     (sum, t) => sum + (plan[t].enabled ? plan[t].count : 0),
     0
   );
+}
+
+interface WorkItem {
+  type: QuestionType;
+  difficulty: DifficultyLevel;
+  count: number;
+}
+
+/**
+ * Split the plan into the small AI calls it needs.
+ *
+ * Each call covers one type + difficulty group and asks for at most
+ * MAX_QUESTIONS_PER_CALL questions, so a single model call never has to
+ * write more than that many questions.
+ */
+function buildWorkItems(plan: GenerationPlan): WorkItem[] {
+  const workItems: WorkItem[] = [];
+
+  (["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).forEach((t) => {
+    if (!plan[t].enabled) return;
+    DIFFICULTIES.forEach((d) => {
+      const total = plan[t].distribution[d];
+      for (let offset = 0; offset < total; offset += MAX_QUESTIONS_PER_CALL) {
+        workItems.push({
+          type: t,
+          difficulty: d,
+          count: Math.min(MAX_QUESTIONS_PER_CALL, total - offset),
+        });
+      }
+    });
+  });
+
+  return workItems;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,18 +330,16 @@ export function QBChatPanel({
     setSuccessMessage(null);
     setIsLoading(true);
 
-    // Count active buckets
-    const buckets: { type: QuestionType; difficulty: DifficultyLevel }[] = [];
-    (["MCQ", "SHORT_ANSWER", "CALCULATION"] as QuestionType[]).forEach((t) => {
-      if (!plan[t].enabled) return;
-      DIFFICULTIES.forEach((d) => {
-        if (plan[t].distribution[d] > 0) {
-          buckets.push({ type: t, difficulty: d });
-        }
-      });
-    });
+    // Split the plan into small calls.
+    //
+    // The model has to write the whole JSON payload in one answer, and the
+    // time that takes grows with the number of questions: a call for 5
+    // questions regularly needs 25-40s, which does not fit in the request
+    // budget. Every call therefore asks for at most MAX_QUESTIONS_PER_CALL
+    // questions, and a failed call is retried.
+    const workItems = buildWorkItems(plan);
 
-    setGenerationSteps(buildSteps(buckets.length));
+    setGenerationSteps(buildSteps(workItems.length));
     setPhase("generating");
 
     try {
@@ -308,36 +359,119 @@ export function QBChatPanel({
 
       updateStep("validate", "completed");
 
-      // Step 2: Trigger generation
-      const genRes = await fetch(`/api/quizzes/${quizId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAIHeaders() },
-        body: JSON.stringify({
-          action: "generate",
-          quizId,
-          // The client owns the plan - send it back with the request.
-          plan: planWithInstructions,
-        }),
-      });
+      // Step 2: Generate the questions in small calls.
+      //
+      // One request per call (a type + difficulty group of at most 2
+      // questions). A full plan needs several AI calls and does not fit in a
+      // single serverless request, so asking for everything at once always
+      // failed with "no questions created".
+      let createdTotal = 0;
+      const failedBuckets: string[] = [];
 
-      const genData = await genRes.json();
+      for (let i = 0; i < workItems.length; i++) {
+        const item = workItems[i];
+        const stepId = `generate-${i}`;
+        updateStep(stepId, "in_progress");
 
-      if (!genRes.ok) {
-        throw new Error(genData.error || "Tạo câu hỏi thất bại");
+        let lastError: string | null = null;
+
+        // A model call can fail for a transient reason (the provider was
+        // slow, the provider was briefly overloaded). Up to
+        // MAX_ATTEMPTS_PER_CALL attempts recover from that without
+        // hammering the provider.
+        for (let attempt = 0; attempt < MAX_ATTEMPTS_PER_CALL; attempt++) {
+          try {
+            const genRes = await fetch(`/api/quizzes/${quizId}/chat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...getAIHeaders() },
+              body: JSON.stringify({
+                action: "generate",
+                quizId,
+                // The client owns the plan - send it back with the request.
+                plan: planWithInstructions,
+                bucket: {
+                  type: item.type,
+                  difficulty: item.difficulty,
+                  count: item.count,
+                },
+              }),
+            });
+
+            const genData = await genRes.json();
+
+            if (!genRes.ok) {
+              throw new Error(genData.error || "Tạo câu hỏi thất bại");
+            }
+
+            createdTotal += genData.data?.createdQuestions ?? 0;
+
+            // Blind re-check: a second, independent AI call per question.
+            // It runs in its own request so the generation call keeps the
+            // time it needs for the model to answer.
+            const questionIds: string[] = genData.data?.createdQuestionIds ?? [];
+            if (questionIds.length > 0) {
+              try {
+                const recheckRes = await fetch(`/api/quizzes/${quizId}/chat`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", ...getAIHeaders() },
+                  body: JSON.stringify({
+                    action: "recheck",
+                    quizId,
+                    questionIds,
+                  }),
+                });
+
+                if (!recheckRes.ok) {
+                  const recheckData = await recheckRes.json();
+                  // The questions are already saved - the teacher reviews
+                  // them manually, so this is not a failed generation.
+                  console.warn(
+                    `Re-check failed for ${questionIds.length} question(s):`,
+                    recheckData?.error
+                  );
+                }
+              } catch {
+                // Same as above - the questions stay in the bank for review.
+              }
+            }
+
+            lastError = null;
+            break;
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : "Đã xảy ra lỗi";
+          }
+        }
+
+        if (lastError) {
+          failedBuckets.push(
+            `${TYPE_META[item.type].label} (${item.difficulty}): ${lastError}`
+          );
+          updateStep(stepId, "error", lastError);
+        } else {
+          updateStep(stepId, "completed");
+        }
       }
 
-      // Mark all generation steps as done (the backend handles them)
-      for (let i = 0; i < buckets.length; i++) {
-        updateStep(`generate-${i}`, "completed");
-      }
       updateStep("recheck", "completed");
       updateStep("save", "completed");
       updateStep("complete", "completed");
 
-      setSuccessMessage(
-        `${genData.data.createdQuestions ?? 0} question(s) generated successfully! Check the question bank.`
-      );
-      setPhase("completed");
+      if (createdTotal === 0) {
+        setError(
+          failedBuckets[0] ??
+            "Không thể tạo câu hỏi nào. Vui lòng thử lại."
+        );
+        setPhase("error");
+      } else {
+        setSuccessMessage(
+          `${createdTotal} question(s) generated successfully! Check the question bank.`
+        );
+        if (failedBuckets.length > 0) {
+          setError(`Một số nhóm câu hỏi không tạo được: ${failedBuckets.join(" | ")}`);
+        }
+        setPhase("completed");
+      }
+
       onQuestionsCreated?.();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Đã xảy ra lỗi";
@@ -387,6 +521,7 @@ export function QBChatPanel({
   if (!isOpen) return null;
 
   const totalCount = getTotalCount(plan);
+  const aiCallCount = buildWorkItems(plan).length;
 
   return (
     <div className="fixed right-0 top-0 z-50 h-full w-[420px] bg-background border-l shadow-lg flex flex-col">
@@ -489,6 +624,12 @@ export function QBChatPanel({
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Tổng số câu hỏi:</span>
               <span className="font-semibold">{totalCount}</span>
+            </div>
+
+            {/* Number of AI calls - every call is a separate request to the model */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Số lần gọi AI (mỗi lần tối đa {MAX_QUESTIONS_PER_CALL} câu):</span>
+              <span>{aiCallCount}</span>
             </div>
 
             {/* Type configs */}

@@ -7,6 +7,17 @@ import { VIETNAMESE_OUTPUT_RULE } from "./language";
 export type QuestionType = "MCQ" | "SHORT_ANSWER" | "CALCULATION";
 export type DifficultyLevel = "easy" | "medium" | "hard";
 
+/**
+ * How much of the lecture material is put into a generation prompt.
+ *
+ * The excerpt is the biggest lever on the model's latency: the failing
+ * runs sent 10 000 characters of material into every prompt and the
+ * "hard" buckets regularly needed more than 37s to answer, which is
+ * more than one serverless request can wait for. A shorter excerpt
+ * keeps the model inside the request budget.
+ */
+export const MATERIAL_EXCERPT_CHARS = 4000;
+
 export interface DifficultyDistribution {
   easy: number;
   medium: number;
@@ -209,7 +220,7 @@ export function getTypeDifficultyPrompt(
   };
 
   const materialSection = materialText
-    ? `\n\nUse this material as context:\n${materialText.slice(0, 10000)}${materialText.length > 10000 ? "\n\n[... content truncated ...]" : ""}`
+    ? `\n\nUse this material as context:\n${materialText.slice(0, MATERIAL_EXCERPT_CHARS)}${materialText.length > MATERIAL_EXCERPT_CHARS ? "\n\n[... content truncated ...]" : ""}`
     : "";
 
   const mcqOutput = `    {

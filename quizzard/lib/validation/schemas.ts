@@ -299,6 +299,22 @@ export const GenerationPlanSchema = z.object({
   customInstructions: z.string().max(2000).optional(),
 });
 
+/**
+ * A single type + difficulty group of questions. The client asks for one
+ * bucket per request so that every request stays inside the serverless
+ * time limit.
+ */
+export const BucketSchema = z.object({
+  type: z.enum(["MCQ", "SHORT_ANSWER", "CALCULATION"]),
+  difficulty: z.enum(["easy", "medium", "hard"]),
+  /**
+   * How many questions this bucket asks for. The client splits a plan into
+   * small calls - a model that has to write 5-7 questions in one answer
+   * regularly needs longer than the request budget allows.
+   */
+  count: z.number().int().min(1).max(5).optional(),
+});
+
 // ---------- Pagination ----------
 
 export const PaginationSchema = z.object({

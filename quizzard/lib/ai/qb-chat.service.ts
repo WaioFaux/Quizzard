@@ -30,8 +30,37 @@ const LOG_PREFIX = "[QB Chat Service]";
  * Wall-clock budget for one generation request. The serverless function has
  * a hard limit (60s on Vercel Hobby), so the generation stops starting new
  * AI work once this is reached and returns what it has.
+ *
+ * One request generates ONE bucket of questions (a type + difficulty group
+ * of at most MAX_QUESTIONS_PER_CALL questions). A model that has to write a
+ * "hard" bucket can need 40s before it answers, so the budget covers that
+ * comfortably.
  */
-const GENERATION_DEADLINE_MS = 30_000;
+const GENERATION_DEADLINE_MS = parseInt(
+  process.env.AI_GENERATION_BUDGET_MS ?? "50000",
+  10
+);
+
+/**
+ * How many questions one AI call may ask for.
+ *
+ * The model writes the whole JSON payload in a single answer, and the time
+ * that takes grows with the number of questions. Measured on the paid
+ * tier: calls for 2-3 questions answered in 8-23s, while the calls that
+ * needed more than 37s produced nothing at all. Capping the call at 2
+ * questions keeps every call inside the request budget; the client splits
+ * a larger plan into several small calls.
+ */
+const MAX_QUESTIONS_PER_CALL = 2;
+
+/**
+ * Budget for the blind re-check phase. The re-check is a second AI call per
+ * question and runs in its own request, so it gets a budget of its own.
+ */
+const RECHECK_DEADLINE_MS = parseInt(
+  process.env.AI_RECHECK_BUDGET_MS ?? "20000",
+  10
+);
 const LOG_PHASE = {
   SESSION_START: "SESSION_START",
   GENERATION_START: "GENERATION_START",
@@ -81,6 +110,8 @@ export interface QBChatResult {
   plan: GenerationPlan | null;
   readyToGenerate: boolean;
   createdQuestions?: number;
+  /** Ids of the questions that were created - used by the re-check call. */
+  createdQuestionIds?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -183,7 +214,21 @@ export async function generateQuestions(
   teacherId: string,
   quizId: string,
   plan: GenerationPlan,
-  headers?: Headers
+  headers?: Headers,
+  options?: {
+    /**
+     * Generate only this bucket (a type + difficulty group). A full plan
+     * needs several AI calls and does not fit in one serverless request,
+     * so the client asks for one bucket per request.
+     */
+    bucket?: { type: QuestionType; difficulty: DifficultyLevel; count?: number };
+    /**
+     * Save the questions without running the blind re-check. The client
+     * asks for the re-check in a follow-up request, which keeps the
+     * generation call inside the serverless time limit.
+     */
+    deferRecheck?: boolean;
+  }
 ): Promise<QBChatResult & { createdQuestions?: number }> {
   console.log(`${LOG_PREFIX} [${LOG_PHASE.GENERATION_START}] Starting question generation`, {
     quizId,
@@ -225,6 +270,7 @@ export async function generateQuestions(
   }
 
   const materialText = quiz.lecture.material?.extractedText ?? undefined;
+
   const topic = quiz.instructions;
 
   // Get enabled types from the plan
@@ -246,14 +292,48 @@ export async function generateQuestions(
   // Collect all questions from all type/difficulty buckets
   const buckets: Array<{ type: QuestionType; difficulty: DifficultyLevel; count: number }> = [];
 
-  // Build the list of buckets we need to generate
+  // Build the list of buckets we need to generate. Every bucket is split
+  // into chunks of at most MAX_QUESTIONS_PER_CALL questions, so a single
+  // AI call never has to write more than that many questions - the number
+  // of questions is what decides how long the model takes to answer.
   for (const type of enabledTypes) {
     const typeConfig = plan[type as keyof GenerationPlan] as TypeConfig;
     for (const diff of difficulties) {
       const count = typeConfig.distribution[diff];
-      if (count > 0) {
-        buckets.push({ type, difficulty: diff, count });
+      for (let offset = 0; offset < count; offset += MAX_QUESTIONS_PER_CALL) {
+        buckets.push({
+          type,
+          difficulty: diff,
+          count: Math.min(MAX_QUESTIONS_PER_CALL, count - offset),
+        });
       }
+    }
+  }
+
+  // A request that targets one bucket only generates that bucket. The client
+  // walks the buckets one by one, so every request stays inside the
+  // serverless time limit.
+  const targetBucket = options?.bucket;
+  if (targetBucket) {
+    const match = buckets.find(
+      (b) => b.type === targetBucket.type && b.difficulty === targetBucket.difficulty
+    );
+    buckets.length = 0;
+    if (match) {
+      // The client may ask for fewer questions than the plan allocates to
+      // this bucket. It never gets more than the plan allows, and never
+      // more than one AI call can answer in time.
+      const requested = targetBucket.count;
+      const count = Math.min(
+        requested ? requested : match.count,
+        match.count,
+        MAX_QUESTIONS_PER_CALL
+      );
+      buckets.push({ ...match, count });
+    } else {
+      throw new ValidationError(
+        `Không có cấu hình cho ${targetBucket.type} mức ${targetBucket.difficulty}.`
+      );
     }
   }
 
@@ -266,9 +346,14 @@ export async function generateQuestions(
   // Generate the buckets concurrently. Running them one after another means
   // the total time is the sum of every AI call, which does not fit in the
   // serverless function budget once a plan has more than a few buckets.
-  const BUCKET_CONCURRENCY = 3;
+  //
+  // When the request targets a single bucket (the normal path - the client
+  // drives one bucket per request) there is nothing to parallelise.
+  const BUCKET_CONCURRENCY = buckets.length > 1 ? 3 : 1;
   const generationDeadline = Date.now() + GENERATION_DEADLINE_MS;
+  const recheckDeadline = generationDeadline + RECHECK_DEADLINE_MS;
   const bucketResults: Array<(QuestionProposal & { _bucket: string })[]> = [];
+  let firstBucketError: unknown = null;
   let nextBucket = 0;
 
   const bucketWorker = async () => {
@@ -282,6 +367,7 @@ export async function generateQuestions(
           skipped: buckets.length - index,
           timestamp: new Date().toISOString(),
         });
+
         return;
       }
 
@@ -342,6 +428,12 @@ export async function generateQuestions(
           error: error instanceof Error ? error.message : String(error),
           timestamp: new Date().toISOString(),
         });
+
+        // Keep the first failure so the caller learns why the bucket failed
+        // instead of only seeing "no questions were created".
+        if (!firstBucketError) {
+          firstBucketError = error;
+        }
         // Continue with other buckets
       }
     }
@@ -357,6 +449,12 @@ export async function generateQuestions(
   const allQuestions = bucketResults.flatMap((questions) => questions ?? []);
 
   if (allQuestions.length === 0) {
+    // Surface the real reason (quota exhausted, provider overloaded, ...)
+    // instead of a generic message that hides it.
+    if (firstBucketError) {
+      throw firstBucketError;
+    }
+
     throw new ValidationError("Không thể tạo câu hỏi nào. Vui lòng thử lại.");
   }
 
@@ -367,58 +465,66 @@ export async function generateQuestions(
 
   // Blind recheck runs concurrently - it is one AI call per question and
   // running them one after another does not fit in the function budget.
-  const RECHECK_CONCURRENCY = 5;
+  //
+  // When the re-check is deferred (the client asks for it in a follow-up
+  // request) the questions are saved as DRAFT and re-checked afterwards.
+  const deferRecheck = options?.deferRecheck === true;
   const recheckResults = new Map<number, { flagged: boolean; reason?: string }>();
-  let nextQuestion = 0;
 
-  const recheckWorker = async () => {
-    while (true) {
-      const index = nextQuestion++;
-      if (index >= allQuestions.length) return;
+  if (!deferRecheck) {
+    const RECHECK_CONCURRENCY = 5;
+    let nextQuestion = 0;
 
-      const question = allQuestions[index];
+    const recheckWorker = async () => {
+      while (true) {
+        const index = nextQuestion++;
+        if (index >= allQuestions.length) return;
 
-      const budgetMs = generationDeadline - Date.now();
-      if (budgetMs <= 0) {
-        // Same outcome as a failed recheck: the question is saved as DRAFT
-        // and the teacher reviews it before publishing.
-        console.warn(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Recheck skipped, deadline reached`, {
-          quizId,
-          questionIndex: index,
-          timestamp: new Date().toISOString(),
-        });
-        recheckResults.set(index, { flagged: false });
-        continue;
+        const question = allQuestions[index];
+
+        const budgetMs = recheckDeadline - Date.now();
+        if (budgetMs <= 0) {
+          // Same outcome as a failed recheck: the question is saved as DRAFT
+          // and the teacher reviews it before publishing.
+          console.warn(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Recheck skipped, deadline reached`, {
+            quizId,
+            questionIndex: index,
+            timestamp: new Date().toISOString(),
+          });
+          recheckResults.set(index, { flagged: false });
+          continue;
+        }
+
+        try {
+          const recheck = await blindRecheck(
+            question as unknown as GeneratedQuestion,
+            aiSettings.provider,
+            aiSettings.model,
+            budgetMs
+          );
+          recheckResults.set(index, recheck);
+        } catch (error) {
+          console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Recheck failed`, {
+            quizId,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date().toISOString(),
+          });
+          recheckResults.set(index, { flagged: false });
+        }
       }
+    };
 
-      try {
-        const recheck = await blindRecheck(
-          question as unknown as GeneratedQuestion,
-          aiSettings.provider,
-          aiSettings.model,
-          budgetMs
-        );
-        recheckResults.set(index, recheck);
-      } catch (error) {
-        console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Recheck failed`, {
-          quizId,
-          error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString(),
-        });
-        recheckResults.set(index, { flagged: false });
-      }
-    }
-  };
-
-  await Promise.all(
-    Array.from(
-      { length: Math.min(RECHECK_CONCURRENCY, allQuestions.length) },
-      () => recheckWorker()
-    )
-  );
+    await Promise.all(
+      Array.from(
+        { length: Math.min(RECHECK_CONCURRENCY, allQuestions.length) },
+        () => recheckWorker()
+      )
+    );
+  }
 
   let createdCount = 0;
   let failedCount = 0;
+  const createdQuestionIds: string[] = [];
 
   // Save each question
   for (let i = 0; i < allQuestions.length; i++) {
@@ -437,13 +543,14 @@ export async function generateQuestions(
         ? QuestionStatus.FLAGGED_FOR_REVIEW
         : QuestionStatus.DRAFT;
 
-      await createQuestion(quizId, teacherId, {
+      const saved = await createQuestion(quizId, teacherId, {
         type: q.type,
         content: q as unknown as Record<string, unknown>,
         status,
         generationInstruction: plan.customInstructions ?? undefined,
       });
 
+      createdQuestionIds.push(saved.id);
       createdCount++;
     } catch (error) {
       failedCount++;
@@ -477,5 +584,112 @@ export async function generateQuestions(
     plan,
     readyToGenerate: false,
     createdQuestions: createdCount,
+    createdQuestionIds,
   };
+}
+
+/**
+ * Blind re-check of questions that were already generated and saved.
+ *
+ * The re-check is a separate request because it is a second AI call per
+ * question: running it inside the generation request left the generation
+ * with less time than the model needed, and the generation was aborted.
+ */
+export async function recheckQuestions(
+  teacherId: string,
+  quizId: string,
+  questionIds: string[],
+  headers?: Headers
+): Promise<{ checked: number; flagged: number }> {
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: quizId },
+    include: { lecture: { select: { class: { select: { teacherId: true } } } } },
+  });
+
+  if (!quiz) {
+    throw new NotFoundError("Bài kiểm tra");
+  }
+
+  if (quiz.lecture.class.teacherId !== teacherId) {
+    throw new AuthorizationError("Bạn không có quyền truy cập bài kiểm tra này");
+  }
+
+  if (quiz.status === QuizStatus.PUBLISHED) {
+    throw new AuthorizationError("Không thể chỉnh sửa bài kiểm tra đã xuất bản");
+  }
+
+  if (questionIds.length === 0) {
+    return { checked: 0, flagged: 0 };
+  }
+
+  const items = await prisma.questionBankItem.findMany({
+    where: { id: { in: questionIds }, quizId },
+  });
+
+  if (items.length === 0) {
+    return { checked: 0, flagged: 0 };
+  }
+
+  const aiSettings = getAISettingsForRequest(headers);
+  const deadline = Date.now() + RECHECK_DEADLINE_MS;
+  const results = new Map<string, { flagged: boolean; reason?: string }>();
+  let nextItem = 0;
+
+  const worker = async () => {
+    while (true) {
+      const index = nextItem++;
+      if (index >= items.length) return;
+
+      const item = items[index];
+      const budgetMs = deadline - Date.now();
+
+      if (budgetMs <= 0) {
+        results.set(item.id, { flagged: false });
+        continue;
+      }
+
+      try {
+        const recheck = await blindRecheck(
+          item.content as unknown as GeneratedQuestion,
+          aiSettings.provider,
+          aiSettings.model,
+          budgetMs
+        );
+        results.set(item.id, recheck);
+      } catch (error) {
+        console.error(`${LOG_PREFIX} [${LOG_PHASE.ERROR}] Recheck failed`, {
+          quizId,
+          questionId: item.id,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        });
+        results.set(item.id, { flagged: false });
+      }
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(5, items.length) }, () => worker())
+  );
+
+  let flagged = 0;
+
+  for (const [questionId, recheck] of results) {
+    if (!recheck.flagged) {
+      continue;
+    }
+
+    flagged++;
+
+    // DRAFT -> FLAGGED_FOR_REVIEW is a legal transition.
+    await prisma.questionBankItem.update({
+      where: { id: questionId },
+      data: {
+        status: QuestionStatus.FLAGGED_FOR_REVIEW,
+        reviewNote: recheck.reason ?? null,
+      },
+    });
+  }
+
+  return { checked: results.size, flagged };
 }

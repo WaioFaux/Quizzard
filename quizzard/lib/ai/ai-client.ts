@@ -19,6 +19,17 @@ const GEMINI_API_VERSION = "v1beta";
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1";
 
 /**
+ * Part of the request budget that is kept aside for the fallback
+ * candidates when the preferred provider gets its slice.
+ *
+ * The reserve is deliberately small: the OpenRouter free models are
+ * usually unusable (the account's daily free-tier quota is spent), so
+ * every second kept aside for them is a second the preferred model does
+ * not get.
+ */
+const FALLBACK_RESERVE_MS = 5_000;
+
+/**
  * Free OpenRouter models tried, in order, when the configured one fails.
  *
  * Every id is verified against the live OpenRouter catalog, and each one is
@@ -257,6 +268,7 @@ export async function callAIForJSON<T>(
   const deadline =
     Date.now() +
     Math.min(config.ai.totalBudgetMs, options.budgetMs ?? config.ai.totalBudgetMs);
+
   const failures: string[] = [];
   let sawInvalidResponse = false;
   let sawQuotaError = false;
@@ -265,25 +277,38 @@ export async function callAIForJSON<T>(
   for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
     const candidate = candidates[candidateIndex];
 
-    // Every provider gets a share of the remaining budget. Without this a
-    // slow primary provider (Gemini can take 30s+ when it is overloaded)
-    // would eat the whole budget and the fallback provider would never get a
-    // chance to answer. The primary gets the larger share; the remaining
-    // candidates share what is left.
+    // The first candidate is the provider the request asked for. It gets
+    // almost the whole remaining budget, minus a small reserve that is kept
+    // for the fallback candidates.
+    //
+    // Splitting the budget evenly (50/50) left the preferred model with
+    // ~15s on a 30s budget. Generating one bucket of questions needs
+    // 20-40s, so every call was aborted by the timeout before it produced
+    // any JSON, and the fallback candidates - which were left with almost
+    // no time - never ran either.
     const remainingBudget = deadline - Date.now();
     const isLastCandidate = candidateIndex === candidates.length - 1;
     const remainingCandidates = candidates.length - candidateIndex;
 
+    const fallbackReserve = Math.min(
+      FALLBACK_RESERVE_MS,
+      Math.floor(remainingBudget * 0.25)
+    );
+    const primarySlice = Math.max(8_000, remainingBudget - fallbackReserve);
+
     let slice: number;
     if (isLastCandidate) {
       slice = remainingBudget;
+    } else if (candidateIndex === 0) {
+      slice = primarySlice;
     } else {
-      const firstShare = Math.max(8_000, Math.floor(remainingBudget * 0.5));
       const othersShare = Math.max(
-        8_000,
-        Math.floor((remainingBudget - firstShare) / (remainingCandidates - 1))
+        5_000,
+        Math.floor(
+          (remainingBudget - primarySlice) / Math.max(1, remainingCandidates - 1)
+        )
       );
-      slice = candidateIndex === 0 ? firstShare : othersShare;
+      slice = othersShare;
     }
 
     const providerDeadline = Date.now() + slice;
@@ -627,6 +652,92 @@ function stripCodeFences(text: string): string {
 }
 
 /**
+ * Repair the escape sequences inside a JSON payload.
+ *
+ * Models regularly write a backslash that JSON does not allow inside a
+ * string ("\sigma", "\text") or a raw newline in the middle of a string.
+ * One of those characters makes the whole payload unparseable, and the
+ * generation call is reported as "the AI returned an unreadable response"
+ * even though the content is complete and correct.
+ *
+ * Only string literals are touched: a backslash that does not start a valid
+ * escape becomes an escaped backslash, and a raw newline / carriage return /
+ * tab inside a string becomes its escape sequence.
+ */
+export function repairJsonEscapes(text: string): string {
+  const validEscapes = new Set(['"', "\\", "/", "b", "f", "n", "r", "t"]);
+
+  let out = "";
+  let inString = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+
+    if (!inString) {
+      if (char === '"') inString = true;
+      out += char;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = false;
+      out += char;
+      continue;
+    }
+
+    if (char === "\\") {
+      const next = text[i + 1];
+
+      if (next === undefined) {
+        out += "\\\\";
+        continue;
+      }
+
+      if (next === "u") {
+        const hex = text.slice(i + 2, i + 6);
+        if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+          out += `\\u${hex}`;
+          i += 5;
+          continue;
+        }
+        // Not a unicode escape after all - keep the backslash literal.
+        out += "\\\\u";
+        i += 1;
+        continue;
+      }
+
+      if (validEscapes.has(next)) {
+        out += `\\${next}`;
+        i += 1;
+        continue;
+      }
+
+      // Invalid escape sequence - keep the backslash as a literal character.
+      out += `\\\\${next}`;
+      i += 1;
+      continue;
+    }
+
+    if (char === "\n") {
+      out += "\\n";
+      continue;
+    }
+    if (char === "\r") {
+      out += "\\r";
+      continue;
+    }
+    if (char === "\t") {
+      out += "\\t";
+      continue;
+    }
+
+    out += char;
+  }
+
+  return out;
+}
+
+/**
  * Parse AI response and extract JSON
  */
 function parseAIResponse<T>(content: string): T {
@@ -648,21 +759,32 @@ function parseAIResponse<T>(content: string): T {
   pushCandidate(extractJSONValue(trimmed));
 
   for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate) as T;
-      console.log(`${LOG_PREFIX} [PARSE] JSON parsed successfully`, {
-        candidateLength: candidate.length,
-        timestamp: new Date().toISOString(),
-      });
-      return parsed;
-    } catch (parseError) {
-      console.warn(`${LOG_PREFIX} [PARSE] Candidate is not valid JSON`, {
-        parseError: parseError instanceof Error ? parseError.message : String(parseError),
-        candidateLength: candidate.length,
-        candidatePreview: candidate.substring(0, 200),
-        timestamp: new Date().toISOString(),
-      });
+    // A payload that only fails because of an invalid escape sequence is
+    // repaired and parsed again before it is given up on.
+    const variants = [candidate, repairJsonEscapes(candidate)];
+    let lastError: unknown = null;
+    let parsed = false;
+
+    for (const variant of variants) {
+      try {
+        const result = JSON.parse(variant) as T;
+        console.log(`${LOG_PREFIX} [PARSE] JSON parsed successfully`, {
+          candidateLength: candidate.length,
+          repaired: variant !== candidate,
+          timestamp: new Date().toISOString(),
+        });
+        return result;
+      } catch (parseError) {
+        lastError = parseError;
+      }
     }
+
+    console.warn(`${LOG_PREFIX} [PARSE] Candidate is not valid JSON`, {
+      parseError: lastError instanceof Error ? lastError.message : String(lastError),
+      candidateLength: candidate.length,
+      candidatePreview: candidate.substring(0, 200),
+      timestamp: new Date().toISOString(),
+    });
   }
 
   console.error(`${LOG_PREFIX} [PARSE] No JSON payload found in AI response`, {

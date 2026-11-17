@@ -6,9 +6,10 @@ import {
   startQBChatSession,
   saveQBPlan,
   generateQuestions,
+  recheckQuestions,
   getTotalQuestionCount,
 } from "@/lib/ai/qb-chat.service";
-import { GenerationPlanSchema } from "@/lib/validation/schemas";
+import { GenerationPlanSchema, BucketSchema } from "@/lib/validation/schemas";
 import { logger } from "@/lib/utils/logger";
 
 const LOG_PREFIX = "[API /quizzes/[quizId]/chat]";
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     const session = await requireTeacher();
     const body = await req.json();
 
-    const { action, quizId, plan } = body;
+    const { action, quizId, plan, bucket } = body;
 
     if (!quizId) {
       throw new ValidationError("Cần có quizId");
@@ -98,7 +99,8 @@ export async function POST(req: NextRequest) {
           session.userId,
           quizId,
           parsedPlan,
-          req.headers
+          req.headers,
+          { bucket: parseBucket(bucket), deferRecheck: true }
         );
         console.log(`${LOG_PREFIX} [ACTION: generate] Done in ${Date.now() - startTime}ms`, {
           quizId,
@@ -108,6 +110,30 @@ export async function POST(req: NextRequest) {
           userId: session.userId,
           quizId,
           createdQuestions: result.createdQuestions,
+          durationMs: Date.now() - startTime,
+        });
+        break;
+      }
+
+      case "recheck": {
+        const questionIds = parseQuestionIds(body.questionIds);
+        const startTime = Date.now();
+        result = await recheckQuestions(
+          session.userId,
+          quizId,
+          questionIds,
+          req.headers
+        );
+        console.log(`${LOG_PREFIX} [ACTION: recheck] Done in ${Date.now() - startTime}ms`, {
+          quizId,
+          checked: result.checked,
+          flagged: result.flagged,
+        });
+        logger.info("api.qb.chat.recheck", {
+          userId: session.userId,
+          quizId,
+          checked: result.checked,
+          flagged: result.flagged,
           durationMs: Date.now() - startTime,
         });
         break;
@@ -144,6 +170,43 @@ function parsePlan(plan: unknown) {
     throw new ValidationError(
       issue ? `${issue.path.join(".") || "plan"}: ${issue.message}` : "Kế hoạch tạo câu hỏi không hợp lệ"
     );
+  }
+
+  return parsed.data;
+}
+
+/**
+ * Validate the ids of the questions to re-check - it is untrusted input.
+ */
+function parseQuestionIds(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    throw new ValidationError("Cần có danh sách câu hỏi để kiểm tra lại");
+  }
+
+  if (value.length > 50) {
+    throw new ValidationError("Quá nhiều câu hỏi trong một lần kiểm tra lại");
+  }
+
+  return value.map((id) => {
+    if (typeof id !== "string" || id.length === 0 || id.length > 64) {
+      throw new ValidationError("Id câu hỏi không hợp lệ");
+    }
+    return id;
+  });
+}
+
+/**
+ * Validate the optional bucket filter - it is untrusted input.
+ */
+function parseBucket(bucket: unknown) {
+  if (bucket === undefined || bucket === null) {
+    return undefined;
+  }
+
+  const parsed = BucketSchema.safeParse(bucket);
+
+  if (!parsed.success) {
+    throw new ValidationError("Bucket không hợp lệ");
   }
 
   return parsed.data;
