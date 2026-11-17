@@ -22,6 +22,7 @@ import {
   getConfirmPrompt,
 } from "./chat-prompts";
 import { logger } from "../utils/logger";
+import { debugLog } from "../utils/debug-log";
 
 const LOG_PREFIX = "[AI Chat]";
 
@@ -129,6 +130,15 @@ function normalizeLectureFormats(value: unknown): LectureFormat[] {
     const parsed = LectureFormatSchema.safeParse(entry);
 
     if (!parsed.success) {
+      // #region agent log
+      debugLog("H2", "lib/ai/chat.service.ts:normalizeLectureFormats", "dropped malformed lecture", {
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join("."),
+          message: issue.message,
+        })),
+        entry: JSON.stringify(entry).slice(0, 600),
+      });
+      // #endregion
       console.warn(`${LOG_PREFIX} [PLAN] Dropping malformed lecture`, {
         issues:
           parsed.error.issues.map((issue) => ({
@@ -265,13 +275,44 @@ export async function confirmLecturePlan(
   const material = await loadOwnedMaterial(teacherId, materialId);
   const classId = material.classId;
 
+  // #region agent log
+  debugLog("H1", "lib/ai/chat.service.ts:confirmLecturePlan", "confirm request received", {
+    teacherId,
+    materialId,
+    classId,
+    proposalCount: proposals.length,
+    proposalTitles: proposals.map((p) => p.title),
+    provider: aiSettings.provider,
+    model: aiSettings.model,
+    materialStatus: material.status,
+  });
+  // #endregion
+
   const prompt = getConfirmPrompt(proposals);
   const aiResponse = await callAIForJSON<{
     message: string;
     lectures: LectureFormat[];
   }>(prompt, { ...aiSettings, budgetMs: AI_BUDGET_MS });
 
+  // #region agent log
+  debugLog("H1", "lib/ai/chat.service.ts:confirmLecturePlan", "AI confirm response received", {
+    responseType: aiResponse === null ? "null" : Array.isArray(aiResponse) ? "array" : typeof aiResponse,
+    topLevelKeys:
+      aiResponse && typeof aiResponse === "object" && !Array.isArray(aiResponse)
+        ? Object.keys(aiResponse as Record<string, unknown>)
+        : null,
+    rawPreview: JSON.stringify(aiResponse).slice(0, 1200),
+  });
+  // #endregion
+
   const lectures = normalizeLectureFormats(aiResponse.lectures);
+
+  // #region agent log
+  debugLog("H2", "lib/ai/chat.service.ts:confirmLecturePlan", "lecture format normalization done", {
+    inputCount: Array.isArray(aiResponse.lectures) ? aiResponse.lectures.length : -1,
+    keptCount: lectures.length,
+  });
+  // #endregion
 
   if (lectures.length === 0) {
     throw new ValidationError(
@@ -335,8 +376,19 @@ export async function createLecturesFromFormat(
   // A transaction keeps the class consistent: either every lecture and its
   // quiz draft are created, or nothing is. A half-created plan used to be
   // left behind whenever one row failed.
+  //
+  // Prisma closes an interactive transaction after 5 seconds by default
+  // (`maxTransactionTime`). Writing a plan means one round trip to the
+  // database per row, and against the pooled Neon connection a round trip
+  // costs a few hundred milliseconds - so a plan with several lectures ran
+  // past that limit. Prisma then closed the transaction mid-write and the
+  // next query failed with P2028 ("Transaction not found"), which surfaced
+  // as an opaque 500. The timeout is raised here and every lecture is
+  // written with a single nested create, so the transaction needs half as
+  // many round trips.
   return prisma.$transaction(async (tx) => {
     const results: Array<{ lectureId: string; quizId: string }> = [];
+    const txStart = Date.now();
 
     // Get current max order inside the transaction so the unique
     // (classId, order) constraint cannot be violated by a concurrent write.
@@ -346,52 +398,102 @@ export async function createLecturesFromFormat(
     });
     let currentOrder = lastLecture?.order ?? 0;
 
-    for (const lectureFormat of lectures) {
-      currentOrder += 1;
+    // #region agent log
+    debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "transaction started", {
+      classId,
+      lectureCount: lectures.length,
+      lastLectureOrder: lastLecture?.order ?? null,
+    });
+    // #endregion
 
-      const title =
-        typeof lectureFormat?.title === "string" && lectureFormat.title.trim()
-          ? lectureFormat.title.trim().slice(0, 200)
-          : `Lecture ${currentOrder}`;
+    try {
+      for (const lectureFormat of lectures) {
+        currentOrder += 1;
 
-      // Create lecture
-      const lecture = await tx.lecture.create({
-        data: {
-          classId,
-          materialId,
-          title,
-          sourceRef: lectureFormat.sourceRef ?? undefined,
-          order: currentOrder,
-        },
-      });
+        const title =
+          typeof lectureFormat?.title === "string" && lectureFormat.title.trim()
+            ? lectureFormat.title.trim().slice(0, 200)
+            : `Lecture ${currentOrder}`;
 
-      // Create associated quiz draft
-      const quiz = await tx.quiz.create({
-        data: {
+        // Create the lecture and its quiz draft in one statement - one round
+        // trip to the database instead of two.
+        const lecture = await tx.lecture.create({
+          data: {
+            classId,
+            materialId,
+            title,
+            sourceRef: lectureFormat.sourceRef ?? undefined,
+            order: currentOrder,
+            quiz: {
+              create: {
+                instructions:
+                  lectureFormat.quiz?.instructions ||
+                  `Questions for: ${title}`,
+                questionsPerAttempt: Math.min(
+                  Math.max(lectureFormat.quiz?.questionCount || 5, 1),
+                  100
+                ),
+                timeLimitMinutes: 30,
+              },
+            },
+          },
+          include: { quiz: true },
+        });
+
+        if (!lecture.quiz) {
+          throw new Error(`Quiz draft was not created for lecture ${lecture.id}`);
+        }
+
+        results.push({
           lectureId: lecture.id,
-          instructions:
-            lectureFormat.quiz?.instructions ||
-            `Questions for: ${title}`,
-          questionsPerAttempt: Math.min(
-            Math.max(lectureFormat.quiz?.questionCount || 5, 1),
-            100
-          ),
-          timeLimitMinutes: 30,
-        },
-      });
+          quizId: lecture.quiz.id,
+        });
 
-      results.push({
-        lectureId: lecture.id,
-        quizId: quiz.id,
-      });
+        console.log(`${LOG_PREFIX} Created lecture`, {
+          lectureId: lecture.id,
+          quizId: lecture.quiz.id,
+          title,
+          elapsedMs: Date.now() - txStart,
+        });
 
-      console.log(`${LOG_PREFIX} Created lecture`, {
-        lectureId: lecture.id,
-        quizId: quiz.id,
-        title,
+        // #region agent log
+        debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "lecture row created", {
+          order: currentOrder,
+          title,
+          elapsedMs: Date.now() - txStart,
+        });
+        // #endregion
+      }
+    } catch (error) {
+      const err = error as { name?: string; message?: string; code?: string; meta?: unknown };
+      // #region agent log
+      debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "transaction failed", {
+        errorName: err?.name,
+        errorMessage: err?.message,
+        errorCode: err?.code,
+        errorMeta: JSON.stringify(err?.meta ?? {}),
+        elapsedMs: Date.now() - txStart,
+        createdSoFar: results.length,
+        stack: err?.message ? String(error).slice(0, 800) : undefined,
       });
+      // #endregion
+      throw error;
     }
 
+    // #region agent log
+    debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "transaction committed", {
+      created: results.length,
+      elapsedMs: Date.now() - txStart,
+    });
+    // #endregion
+
     return results;
+  }, {
+    // The default (5s) is too short for a plan with several lectures: the
+    // transaction was closed by Prisma mid-write and the request failed with
+    // P2028. `maxWait` is the time allowed to get a connection from the
+    // pool, which is tight as well with a single-connection pool.
+    timeout: 30_000,
+    maxWait: 10_000,
   });
 }

@@ -10,6 +10,7 @@ import {
 } from "@/lib/ai/chat.service";
 import { LectureProposalsSchema } from "@/lib/validation/schemas";
 import { logger } from "@/lib/utils/logger";
+import { debugLog } from "@/lib/utils/debug-log";
 
 // The AI round trip can take a while - give the function enough room to
 // finish and answer with a real error instead of being killed mid-flight.
@@ -58,6 +59,17 @@ export async function POST(req: NextRequest) {
       classId,
       timestamp: new Date().toISOString(),
     });
+
+    // #region agent log
+    debugLog("H4", "app/api/materials/[materialId]/chat/route.ts:POST", "request received", {
+      action,
+      userId: session.userId,
+      materialId,
+      classId,
+      proposalCount: Array.isArray(proposals) ? proposals.length : -1,
+      hasMessage: typeof message === "string",
+    });
+    // #endregion
 
     let result;
 
@@ -134,6 +146,15 @@ export async function POST(req: NextRequest) {
     if (err instanceof Error) {
       console.error("[API /materials/[materialId]/chat] Stack:", err.stack);
     }
+    // #region agent log
+    const caught = err as { name?: string; message?: string; code?: string; stack?: string };
+    debugLog("H4", "app/api/materials/[materialId]/chat/route.ts:POST", "request failed", {
+      errorName: caught?.name,
+      errorMessage: caught?.message,
+      errorCode: caught?.code,
+      stack: caught?.stack?.slice(0, 1200),
+    });
+    // #endregion
     return handleApiError(err);
   }
 }
