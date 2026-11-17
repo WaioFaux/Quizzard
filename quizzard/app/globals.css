@@ -18,7 +18,7 @@
   /* shadcn/ui CSS variables */
   --card: 0 0 0 0;
   --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0 0 0;
+  --popover: 0 0% 100%;
   --popover-foreground: 222.2 84% 4.9%;
   --primary: 239 84% 67%;
   --primary-foreground: 60 9.1% 97.8%;

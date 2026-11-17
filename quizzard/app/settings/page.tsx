@@ -435,7 +435,7 @@ export default function SettingsPage() {
                         Sử dụng API key Gemini của bạn
                       </p>
                     </div>
-                    <Badge variant="outline">Miễn phí tier</Badge>
+                    <Badge variant="outline">Tier miễn phí</Badge>
                   </div>
                   <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="openrouter" id="openrouter" />
@@ -503,18 +503,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
-
-              {/* Info Box */}
-              <div className="rounded-lg border p-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-                <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-2">
-                  Lưu ý về giới hạn
-                </h4>
-                <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
-                  <li>Gemini: 15 yêu cầu/phút, 1500 yêu cầu/ngày (gói miễn phí)</li>
-                  <li>OpenRouter miễn phí: 50 yêu cầu/ngày</li>
-                  <li>OpenRouter trả phí: Tùy thuộc vào mô hình và số credits</li>
-                </ul>
-              </div>
 
               <Button onClick={handleSaveAI} disabled={isSavingAI}>
                 {isSavingAI ? "Đang lưu..." : "Lưu cài đặt AI"}
