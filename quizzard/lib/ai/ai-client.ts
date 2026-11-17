@@ -6,7 +6,6 @@
 import { config } from "../config";
 import { AIProviderError, AIResponseError } from "../utils/errors";
 import { ALL_MODELS, type AIProvider } from "./available-models";
-import { debugLog } from "../utils/debug-log";
 
 export type { AIProvider } from "./available-models";
 
@@ -655,17 +654,6 @@ function parseAIResponse<T>(content: string): T {
         candidateLength: candidate.length,
         timestamp: new Date().toISOString(),
       });
-      // #region agent log
-      debugLog("H1", "lib/ai/ai-client.ts:parseAIResponse", "parsed AI payload", {
-        candidateLength: candidate.length,
-        parsedType: parsed === null ? "null" : Array.isArray(parsed) ? "array" : typeof parsed,
-        topLevelKeys:
-          parsed && typeof parsed === "object" && !Array.isArray(parsed)
-            ? Object.keys(parsed as Record<string, unknown>)
-            : null,
-        preview: candidate.slice(0, 800),
-      });
-      // #endregion
       return parsed;
     } catch (parseError) {
       console.warn(`${LOG_PREFIX} [PARSE] Candidate is not valid JSON`, {
@@ -682,13 +670,6 @@ function parseAIResponse<T>(content: string): T {
     contentPreview: content.substring(0, 300),
     timestamp: new Date().toISOString(),
   });
-
-  // #region agent log
-  debugLog("H1", "lib/ai/ai-client.ts:parseAIResponse", "no JSON payload in AI response", {
-    contentLength: content.length,
-    contentPreview: content.slice(0, 800),
-  });
-  // #endregion
 
   // A typed error, so the client gets an actionable message and the retry
   // loop can still try another provider.

@@ -22,7 +22,6 @@ import {
   getConfirmPrompt,
 } from "./chat-prompts";
 import { logger } from "../utils/logger";
-import { debugLog } from "../utils/debug-log";
 
 const LOG_PREFIX = "[AI Chat]";
 
@@ -130,15 +129,6 @@ function normalizeLectureFormats(value: unknown): LectureFormat[] {
     const parsed = LectureFormatSchema.safeParse(entry);
 
     if (!parsed.success) {
-      // #region agent log
-      debugLog("H2", "lib/ai/chat.service.ts:normalizeLectureFormats", "dropped malformed lecture", {
-        issues: parsed.error.issues.map((issue) => ({
-          path: issue.path.join("."),
-          message: issue.message,
-        })),
-        entry: JSON.stringify(entry).slice(0, 600),
-      });
-      // #endregion
       console.warn(`${LOG_PREFIX} [PLAN] Dropping malformed lecture`, {
         issues:
           parsed.error.issues.map((issue) => ({
@@ -275,44 +265,13 @@ export async function confirmLecturePlan(
   const material = await loadOwnedMaterial(teacherId, materialId);
   const classId = material.classId;
 
-  // #region agent log
-  debugLog("H1", "lib/ai/chat.service.ts:confirmLecturePlan", "confirm request received", {
-    teacherId,
-    materialId,
-    classId,
-    proposalCount: proposals.length,
-    proposalTitles: proposals.map((p) => p.title),
-    provider: aiSettings.provider,
-    model: aiSettings.model,
-    materialStatus: material.status,
-  });
-  // #endregion
-
   const prompt = getConfirmPrompt(proposals);
   const aiResponse = await callAIForJSON<{
     message: string;
     lectures: LectureFormat[];
   }>(prompt, { ...aiSettings, budgetMs: AI_BUDGET_MS });
 
-  // #region agent log
-  debugLog("H1", "lib/ai/chat.service.ts:confirmLecturePlan", "AI confirm response received", {
-    responseType: aiResponse === null ? "null" : Array.isArray(aiResponse) ? "array" : typeof aiResponse,
-    topLevelKeys:
-      aiResponse && typeof aiResponse === "object" && !Array.isArray(aiResponse)
-        ? Object.keys(aiResponse as Record<string, unknown>)
-        : null,
-    rawPreview: JSON.stringify(aiResponse).slice(0, 1200),
-  });
-  // #endregion
-
   const lectures = normalizeLectureFormats(aiResponse.lectures);
-
-  // #region agent log
-  debugLog("H2", "lib/ai/chat.service.ts:confirmLecturePlan", "lecture format normalization done", {
-    inputCount: Array.isArray(aiResponse.lectures) ? aiResponse.lectures.length : -1,
-    keptCount: lectures.length,
-  });
-  // #endregion
 
   if (lectures.length === 0) {
     throw new ValidationError(
@@ -398,14 +357,6 @@ export async function createLecturesFromFormat(
     });
     let currentOrder = lastLecture?.order ?? 0;
 
-    // #region agent log
-    debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "transaction started", {
-      classId,
-      lectureCount: lectures.length,
-      lastLectureOrder: lastLecture?.order ?? null,
-    });
-    // #endregion
-
     try {
       for (const lectureFormat of lectures) {
         currentOrder += 1;
@@ -455,37 +406,15 @@ export async function createLecturesFromFormat(
           title,
           elapsedMs: Date.now() - txStart,
         });
-
-        // #region agent log
-        debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "lecture row created", {
-          order: currentOrder,
-          title,
-          elapsedMs: Date.now() - txStart,
-        });
-        // #endregion
       }
     } catch (error) {
-      const err = error as { name?: string; message?: string; code?: string; meta?: unknown };
-      // #region agent log
-      debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "transaction failed", {
-        errorName: err?.name,
-        errorMessage: err?.message,
-        errorCode: err?.code,
-        errorMeta: JSON.stringify(err?.meta ?? {}),
-        elapsedMs: Date.now() - txStart,
+      console.error(`${LOG_PREFIX} Failed to create lectures`, {
+        error: error instanceof Error ? error.message : String(error),
         createdSoFar: results.length,
-        stack: err?.message ? String(error).slice(0, 800) : undefined,
+        elapsedMs: Date.now() - txStart,
       });
-      // #endregion
       throw error;
     }
-
-    // #region agent log
-    debugLog("H3", "lib/ai/chat.service.ts:createLecturesFromFormat", "transaction committed", {
-      created: results.length,
-      elapsedMs: Date.now() - txStart,
-    });
-    // #endregion
 
     return results;
   }, {
