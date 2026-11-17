@@ -49,30 +49,6 @@ export async function POST(req: NextRequest) {
       status: report.status,
     });
 
-    // #region agent log
-    fetch("http://127.0.0.1:7643/ingest/0cb14382-f394-4521-a685-f858a9d2a5ea", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "f207dd",
-      },
-      body: JSON.stringify({
-        sessionId: "f207dd",
-        runId: "post-fix",
-        hypothesisId: "H1",
-        location: "app/api/reports/route.ts:POST",
-        message: "Report created",
-        data: {
-          reportId: report.id,
-          studentAnswerId: parsed.data.studentAnswerId,
-          descriptionLength: parsed.data.description.length,
-          status: report.status,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-
     return Response.json(
       {
         data: {
